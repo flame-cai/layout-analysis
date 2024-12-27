@@ -96,11 +96,11 @@ def generate_realistic_parameters():
     page_height = random.randint(520, 550)   # Varying around 532
     
     # Number of lines varies by content density
-    num_lines = random.randint(5, 15)  # Varying around 20
+    num_lines = random.randint(5, 12)  # Varying around 20
     
     # Character length varies by content style
-    min_chars = random.randint(20, 35)
-    max_chars = random.randint(45, 55)
+    min_chars = random.randint(20, 22)
+    max_chars = random.randint(28, 30)
     chars_per_line_range = (min_chars, max_chars)
     
     # Footnote probability varies by document type
@@ -122,7 +122,7 @@ def generate_realistic_parameters():
 
 
 # Generate the dataset
-for i in range(10000):
+for i in range(50):
     params = generate_realistic_parameters()
     points, labels = generate_text_layout(**params)
 
