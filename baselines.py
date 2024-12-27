@@ -8,6 +8,13 @@ from sklearn.model_selection import train_test_split
 import torch.nn.functional as F
 from models import *
 # nvidia-smi | grep 'python' | awk '{ print $5 }' | xargs -n1 kill -9
+
+#TODO
+# does the ordering of the points matter? translation invariant
+# optimize model hyperparameters
+# hidden dime, dim feed forward, max points
+
+
 class PageDataset(Dataset):
     def __init__(self, data_dir, page_indices, max_points=500):
         self.data_dir = data_dir
