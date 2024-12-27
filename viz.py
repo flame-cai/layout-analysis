@@ -51,7 +51,7 @@ def visualize_text_layout(points_file, labels_file=None):
     
     plt.tight_layout()
     plt.show()
-    plt.savefig('/home/kartik/layout-analysis/data')
+    plt.savefig('/home/kartik/layout-analysis/analysis_images/ordering')
    
     
 

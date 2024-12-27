@@ -1,1 +1,1 @@
-# manuscript-annotation-tool# layout-analysis
+# layout-analysis

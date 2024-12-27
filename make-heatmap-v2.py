@@ -417,7 +417,9 @@ def process_image(folder_path):
         fig = visualize_results(region_score, points)
         plt.show()
         plt.axis('off')  # Turn off the axis        
-        plt.savefig(f'/mnt/cai-data/layout-analysis/manuscripts/{m_name}/heatmaps/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
+        #plt.savefig(f'/mnt/cai-data/layout-analysis/manuscripts/{m_name}/heatmaps/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
+        plt.savefig(f'/home/kartik/layout-analysis/analysis_images/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
+
 
     print(f"{time.time()-st:.2f} seconds elapsed.....")
 
