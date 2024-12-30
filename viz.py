@@ -56,8 +56,8 @@ def visualize_text_layout(points_file, labels_file=None):
     
 
 # Example usage with your data
-labels_file = "/home/kartik/layout-analysis/data/synthetic-data/pg_10_labels.txt"
-points_file = "/home/kartik/layout-analysis/data/synthetic-data/pg_10_points.txt"  # Update with your actual file path
+labels_file = "/home/kartik/layout-analysis/data/synthetic-data/pg_19_labels.txt"
+points_file = "/home/kartik/layout-analysis/data/synthetic-data/pg_19_points.txt"  # Update with your actual file path
 visualize_text_layout(points_file, labels_file)
 
 

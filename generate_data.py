@@ -14,7 +14,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
     char_spacing = (right_margin - left_margin) / 60  # Maximum characters per line
     
     y_position = line_height  # Start from top with some margin
-    
+
     # Generate main text lines
     for line_num in range(num_lines):
         # Randomly decide number of characters in this line
@@ -24,8 +24,8 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
         for char_num in range(num_chars):
             x = left_margin + char_num * char_spacing
             # Add small random variation to make it look more natural
-            x += random.uniform(-2, 2)
-            y = y_position + random.uniform(-1, 1)
+            x += random.uniform(-4, 4)
+            y = y_position + random.uniform(-4, 4)
             
             points.append([int(x), int(y)])
             labels.append(current_label)
@@ -82,29 +82,37 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
 
     return np.array(points), np.array(labels)
 
-def save_points_and_labels(points, labels, points_file="points.txt", labels_file="labels.txt"):
-    """Save points and labels to separate files"""
-    path='/home/kartik/layout-analysis/data/synthetic-data/'
+def save_points_and_labels(points, labels, points_file="points.txt", labels_file="labels.txt", sorted_points_file="sorted_points.txt"):
+    """Save points and labels to separate files, including sorted points"""
+    path = '/home/kartik/layout-analysis/data/synthetic-data/'
+    
+    # Save original points and labels
     np.savetxt(path+points_file, points, fmt='%d', delimiter=' ')
     np.savetxt(path+labels_file, labels, fmt='%d')
-
+    
+    # Sort points according to labels
+    sorting_indices = np.argsort(labels)
+    sorted_points = points[sorting_indices]
+    
+    # Save sorted points
+    np.savetxt(path+sorted_points_file, sorted_points, fmt='%d', delimiter=' ')
 
 def generate_realistic_parameters():
     """Generate realistic variations in page layout parameters"""
     # Page dimensions (slight variations around standard values)
-    page_width = random.randint(1200, 1300)  # Varying around 1250
-    page_height = random.randint(520, 550)   # Varying around 532
+    page_width = random.randint(200, 300)  # Varying around 1250
+    page_height = random.randint(500, 550)   # Varying around 532
     
     # Number of lines varies by content density
-    num_lines = random.randint(5, 12)  # Varying around 20
+    num_lines = 2 #random.randint(5, 12)  # Varying around 20
     
     # Character length varies by content style
-    min_chars = random.randint(20, 22)
-    max_chars = random.randint(28, 30)
+    min_chars = random.randint(3, 4)
+    max_chars = random.randint(5, 7)
     chars_per_line_range = (min_chars, max_chars)
     
     # Footnote probability varies by document type
-    footnotes_prob = random.uniform(0.15, 0.25)  # Varying around 0.2
+    footnotes_prob = 0 #random.uniform(0.15, 0.25)  # Varying around 0.2
     
     # Footnote length varies by content
     min_footnote = random.randint(1, 4)
@@ -120,13 +128,13 @@ def generate_realistic_parameters():
         'footnote_length_range': footnote_length_range
     }
 
-
 # Generate the dataset
-for i in range(50):
+for i in range(5000):
     params = generate_realistic_parameters()
     points, labels = generate_text_layout(**params)
-
-    # Save to files
-    points_file_name=f"pg_{i}_points.txt"
-    labels_file_name=f"pg_{i}_labels.txt"
-    save_points_and_labels(points, labels,points_file_name,labels_file_name)
+    
+    # Save to files with sorted points
+    points_file_name = f"pg_{i}_points.txt"
+    labels_file_name = f"pg_{i}_labels.txt"
+    sorted_points_file_name = f"pg_{i}_sorted_points.txt"
+    save_points_and_labels(points, labels, points_file_name, labels_file_name, sorted_points_file_name)
