@@ -171,7 +171,7 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10):
         points_first = points_first.cpu()
         
         # Create visualization
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(40, 20))
         
         # Original order
         ax1.scatter(points_first[:, 0], points_first[:, 1])
@@ -214,7 +214,7 @@ def main():
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device)
+    #train_model(model, train_loader, val_loader, device=device)
     
     # Load best model and evaluate
     model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))
@@ -226,6 +226,8 @@ if __name__ == "__main__":
 
 # TODO
 # normalize for page size
-# ensure decoding does not repeat a class
+# ordering is pretty wrog
+# make a nice evaluation metric
+# ensure decoding does not repeat a class !! important
 # how does transformer encoder work
 # train longer
