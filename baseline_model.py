@@ -16,6 +16,8 @@ START_IDX = tokenizer.convert_tokens_to_ids('<')
 END_IDX = tokenizer.convert_tokens_to_ids('>')
 MAX_SEQ_LENGTH = 70
 
+
+
 def points_to_tokens(points):
     """Convert points to ByT5 tokens"""
     # Convert points to string format: "x1,y1;x2,y2;..."
@@ -444,7 +446,7 @@ if __name__ == "__main__":
         num_decoder_layers=6,
         dim_feedforward=256
     )
-    
+    /home/kartik/layout-analysis/data/synthetic-data
     # Train model
     print("Starting training...")
     model = train_model(model, train_loader, val_loader, num_epochs=num_epochs, device=device)

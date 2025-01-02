@@ -98,12 +98,12 @@ def generate_realistic_parameters():
     page_height = random.randint(500, 550)   # Varying around 532
     
     # Number of lines varies by content density
-    num_lines = 2 #random.randint(5, 12)  # Varying around 20
+    num_lines = 10 #random.randint(5, 12)  # Varying around 20
     
     # Character length varies by content style
     min_chars = random.randint(3, 4)
     max_chars = random.randint(5, 7)
-    chars_per_line_range = (3,3)#(min_chars, max_chars)
+    chars_per_line_range = (min_chars, max_chars)
     
     # Footnote probability varies by document type
     footnotes_prob = 0 #random.uniform(0.15, 0.25)  # Varying around 0.2
