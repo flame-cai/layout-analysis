@@ -94,19 +94,19 @@ def save_points_and_labels(points, labels, points_file="points.txt", labels_file
 def generate_realistic_parameters():
     """Generate realistic variations in page layout parameters"""
     # Page dimensions (slight variations around standard values)
-    page_width = random.randint(200, 300)  # Varying around 1250
+    page_width = random.randint(1200, 1300)  # Varying around 1250
     page_height = random.randint(500, 550)   # Varying around 532
     
     # Number of lines varies by content density
-    num_lines = 10 #random.randint(5, 12)  # Varying around 20
+    num_lines = random.randint(5, 12)  # Varying around 20
     
     # Character length varies by content style
-    min_chars = random.randint(3, 4)
-    max_chars = random.randint(5, 7)
+    min_chars = random.randint(20, 24)
+    max_chars = random.randint(30, 34)
     chars_per_line_range = (min_chars, max_chars)
     
     # Footnote probability varies by document type
-    footnotes_prob = 0 #random.uniform(0.15, 0.25)  # Varying around 0.2
+    footnotes_prob = random.uniform(0.10, 0.20)  # Varying around 0.2
     
     # Footnote length varies by content
     min_footnote = random.randint(1, 4)

@@ -9,8 +9,10 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import random
 import math
 
+MAX_LENGTH = 500
+
 class PointDataset(Dataset):
-    def __init__(self, data_dir, split_files, max_points=100):
+    def __init__(self, data_dir, split_files, max_points=MAX_LENGTH):
         self.data_dir = data_dir
         self.max_points = max_points
         self.examples = []
@@ -45,7 +47,7 @@ class PointDataset(Dataset):
         return torch.FloatTensor(points), torch.LongTensor(labels)
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len=100):
+    def __init__(self, d_model, max_len=MAX_LENGTH):
         super().__init__()
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
@@ -58,7 +60,7 @@ class PositionalEncoding(nn.Module):
         return x + self.pe[:x.size(0)]
 
 class ReadingOrderTransformer(nn.Module):
-    def __init__(self, d_model=64, nhead=4, num_encoder_layers=3, num_classes=102):  # 20 + start/end tokens
+    def __init__(self, d_model=64, nhead=4, num_encoder_layers=3, num_classes=MAX_LENGTH+2):  # MAX_LENGTH + start/end tokens
         super().__init__()
         
         # Input embedding
@@ -92,7 +94,7 @@ class ReadingOrderTransformer(nn.Module):
         
         # Output layer
         output = output.transpose(0, 1)  # [batch_size, seq_len, d_model]
-        output = self.output(output)  # [batch_size, seq_len, num_classes]
+        output = self.output(output)  # [batch_size, seq_len, num_classes] [32, 100, 100]
         
         return output
 
@@ -220,3 +222,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# TODO
+# normalize for page size
+# ensure decoding does not repeat a class
+# how does transformer encoder work
+# train longer
