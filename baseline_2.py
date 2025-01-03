@@ -12,11 +12,29 @@ import math
 MAX_LENGTH = 500
 
 class PointDataset(Dataset):
-    def __init__(self, data_dir, split_files, max_points=MAX_LENGTH):
+    def __init__(self, data_dir, split_files, max_points=MAX_LENGTH, normalize=True):
         self.data_dir = data_dir
         self.max_points = max_points
+        self.normalize = normalize
         self.examples = []
         
+        # Keep track of min/max coordinates for normalization
+        self.min_x = float('inf')
+        self.min_y = float('inf')
+        self.max_x = float('-inf')
+        self.max_y = float('-inf')
+        
+        # First pass: find min/max coordinates if normalizing
+        if normalize:
+            for file in split_files:
+                points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
+                points = np.loadtxt(points_file)
+                self.min_x = min(self.min_x, points[:, 0].min())
+                self.min_y = min(self.min_y, points[:, 1].min())
+                self.max_x = max(self.max_x, points[:, 0].max())
+                self.max_y = max(self.max_y, points[:, 1].max())
+        
+        # Second pass: load and process data
         for file in split_files:
             points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
             labels_file = os.path.join(data_dir, f"pg_{file}_labels.txt")
@@ -24,12 +42,16 @@ class PointDataset(Dataset):
             points = np.loadtxt(points_file)
             labels = np.loadtxt(labels_file).astype(int)
             
+            # Normalize points if requested
+            if normalize:
+                points[:, 0] = (points[:, 0] - self.min_x) / (self.max_x - self.min_x)
+                points[:, 1] = (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
+            
             # Shuffle points and labels together
             indices = list(range(len(points)))
             random.shuffle(indices)
             points = points[indices]
             labels = labels[indices]
-            # confirmed that these are shuffled
             
             # Pad if necessary
             if len(points) < max_points:
@@ -45,6 +67,15 @@ class PointDataset(Dataset):
     def __getitem__(self, idx):
         points, labels = self.examples[idx]
         return torch.FloatTensor(points), torch.LongTensor(labels)
+    
+    def get_normalization_params(self):
+        """Return normalization parameters for use in evaluation"""
+        return {
+            'min_x': self.min_x,
+            'max_x': self.max_x,
+            'min_y': self.min_y,
+            'max_y': self.max_y
+        }
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=MAX_LENGTH):
@@ -138,57 +169,116 @@ def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
             best_val_loss = val_loss
             torch.save(model.state_dict(), '/home/kartik/layout-analysis/models/best_model.pt')
 
-def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10):
+def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm_params=None):
+    """
+    Evaluate the model and create visualizations for multiple test pages.
+    
+    Args:
+        model: The trained transformer model
+        test_loader: DataLoader containing test data
+        device: Device to run the model on ('cuda' or 'cpu')
+        num_pages: Number of test pages to visualize
+        norm_params: Dictionary containing normalization parameters {min_x, max_x, min_y, max_y}
+    """
+    # Ensure model is on correct device and in evaluation mode
     model = model.to(device)
     model.eval()
     
-    # Create a single iterator for the test loader
+    # Create iterator for test loader
     test_iter = iter(test_loader)
     
-    # Process multiple test pages
+    
     for page_idx in range(num_pages):
+        # Get next test page
         try:
-            # Get next batch using the iterator
             points, true_labels = next(test_iter)
         except StopIteration:
-            # If we run out of data, create new iterator
             test_iter = iter(test_loader)
             points, true_labels = next(test_iter)
             
-        # Move points to the same device as model
+        # Move data to appropriate device
         points = points.to(device)
-        
-        # Since batch size is 1, we can directly use index 0
-        points_first = points[0]
+        points_first = points[0]  # Get first example since batch_size=1
         true_labels_first = true_labels[0]
         
-        # Get predictions
+        # Get model predictions
         with torch.no_grad():
             output = model(points_first.unsqueeze(0))
             pred_labels = output[0].argmax(dim=-1).cpu()
         
-        # Move points back to CPU for visualization
+        # Move points back to CPU
         points_first = points_first.cpu()
         
-        # Create visualization
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(40, 20))
+        # Denormalize points if normalization parameters are provided
+        if norm_params is not None:
+            points_first_denorm = points_first.clone()
+            points_first_denorm[:, 0] = (points_first[:, 0] * 
+                (norm_params['max_x'] - norm_params['min_x']) + norm_params['min_x'])
+            points_first_denorm[:, 1] = (points_first[:, 1] * 
+                (norm_params['max_y'] - norm_params['min_y']) + norm_params['min_y'])
+        else:
+            points_first_denorm = points_first
         
-        # Original order
-        ax1.scatter(points_first[:, 0], points_first[:, 1])
-        for i, (x, y) in enumerate(points_first):
-            if true_labels_first[i] != -1:  # Skip padding
-                ax1.annotate(str(true_labels_first[i].item()), (x, y))
-        ax1.set_title(f'Original Reading Order - Page {page_idx + 1}')
+        # Create figure with two subplots
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+        fig.suptitle(f'Reading Order Analysis - Page {page_idx + 1}', 
+                    fontsize=16, y=1.05)
         
-        # Predicted order
-        ax2.scatter(points_first[:, 0], points_first[:, 1])
-        for i, (x, y) in enumerate(points_first):
-            if true_labels_first[i] != -1:  # Skip padding
-                ax2.annotate(str(pred_labels[i].item()), (x, y))
-        ax2.set_title(f'Predicted Reading Order - Page {page_idx + 1}')
+        # Helper function to create consistent point and label plotting
+        def plot_points_and_labels(ax, points, labels, title):
+            # Plot only valid points (not padding)
+            valid_mask = labels != -1
+            valid_points = points[valid_mask]
+            valid_labels = labels[valid_mask]
+            
+            # Plot points with color mapping
+            scatter = ax.scatter(valid_points[:, 0], valid_points[:, 1],
+                               c=valid_labels, cmap='viridis',
+                               s=100, zorder=5)
+            
+            # Add labels with white background for better visibility
+            for i, (x, y) in enumerate(valid_points):
+                label = valid_labels[i]
+                ax.annotate(str(label.item()),
+                           (x, y),
+                           xytext=(5, 5),
+                           textcoords='offset points',
+                           ha='left',
+                           va='bottom',
+                           bbox=dict(boxstyle='round,pad=0.5',
+                                   fc='white',
+                                   ec='gray',
+                                   alpha=0.8),
+                           zorder=6)
+            
+            # Customize subplot
+            ax.set_title(title, pad=20, fontsize=14)
+            ax.grid(True, linestyle='--', alpha=0.7)
+            ax.set_xlabel('X Coordinate', fontsize=12)
+            ax.set_ylabel('Y Coordinate', fontsize=12)
+            
+            return scatter
         
-        plt.savefig(f'/home/kartik/layout-analysis/analysis_images/reading_order_comparison_page_{page_idx + 1}.png')
+        # Create visualizations for both original and predicted orders
+        scatter1 = plot_points_and_labels(ax1, points_first_denorm, true_labels_first,
+                                        'Original Reading Order')
+        scatter2 = plot_points_and_labels(ax2, points_first_denorm, pred_labels,
+                                        'Predicted Reading Order')
+        
+        # Add colorbars
+        plt.colorbar(scatter1, ax=ax1, label='Reading Order Index')
+        plt.colorbar(scatter2, ax=ax2, label='Reading Order Index')
+        
+        # Adjust layout and save
+        plt.tight_layout()
+        plt.savefig(f'/home/kartik/layout-analysis/analysis_images/reading_order_comparison_page_{page_idx + 1}.png',
+                   bbox_inches='tight', dpi=300)
         plt.close()
+        
+        # Print prediction accuracy for this page
+        valid_mask = true_labels_first != -1
+        accuracy = (pred_labels[valid_mask] == true_labels_first[valid_mask]).float().mean()
+        print(f'Page {page_idx + 1} Accuracy: {accuracy:.2%}')
 
 def main():
     # Set device
@@ -206,6 +296,10 @@ def main():
     train_dataset = PointDataset('/home/kartik/layout-analysis/data/synthetic-data', train_files)
     val_dataset = PointDataset('/home/kartik/layout-analysis/data/synthetic-data', val_files)
     test_dataset = PointDataset('/home/kartik/layout-analysis/data/synthetic-data', test_files)
+
+    train_norm_params = train_dataset.get_normalization_params()
+    val_norm_params = val_dataset.get_normalization_params()
+    test_norm_params = test_dataset.get_normalization_params()
     
     # Create data loaders
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
@@ -214,11 +308,11 @@ def main():
     
     # Create and train model
     model = ReadingOrderTransformer()
-    #train_model(model, train_loader, val_loader, device=device)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=100)
     
     # Load best model and evaluate
     model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))
-    evaluate_and_visualize(model, test_loader, device=device)
+    evaluate_and_visualize(model, test_loader, device=device, norm_params=test_norm_params)
 
 if __name__ == "__main__":
     main()

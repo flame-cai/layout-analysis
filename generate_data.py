@@ -1,6 +1,8 @@
 import numpy as np
 import random
 
+CHARS_PER_LINE = 34  #max possible
+
 def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_per_line_range=(30, 50), 
                         footnotes_prob=0.2, footnote_length_range=(10, 30)):
     points = []
@@ -11,7 +13,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
     left_margin = page_width * 0.15  # 15% margin from left
     right_margin = page_width * 0.85  # 15% margin from right
     line_height = page_height / (num_lines * 1.5)  # Allow space for footnotes
-    char_spacing = (right_margin - left_margin) / 60  # Maximum characters per line
+    char_spacing = (right_margin - left_margin) / CHARS_PER_LINE  # Maximum characters per line
     
     y_position = line_height  # Start from top with some margin
 
@@ -102,7 +104,7 @@ def generate_realistic_parameters():
     
     # Character length varies by content style
     min_chars = random.randint(20, 24)
-    max_chars = random.randint(30, 34)
+    max_chars = random.randint(30, CHARS_PER_LINE)
     chars_per_line_range = (min_chars, max_chars)
     
     # Footnote probability varies by document type
