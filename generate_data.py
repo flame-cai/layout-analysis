@@ -31,7 +31,6 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
             
             points.append([int(x), int(y)])
             labels.append(current_label)
-            current_label += 1
         
         # Randomly decide if this line has a footnote
         if random.random() < footnotes_prob:
@@ -78,8 +77,8 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
                 
                 points.append([int(x), int(y)])
                 labels.append(current_label)
-                current_label += 1
-        
+
+        current_label += 1
         y_position += line_height
 
     return np.array(points), np.array(labels)

@@ -9,7 +9,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import random
 import math
 
-MAX_LENGTH = 500
+MAX_LENGTH = 1000
 
 class PointDataset(Dataset):
     def __init__(self, data_dir, split_files, max_points=MAX_LENGTH, normalize=True):
@@ -308,7 +308,7 @@ def main():
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=100)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=10)
     
     # Load best model and evaluate
     model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))
@@ -319,6 +319,8 @@ if __name__ == "__main__":
 
 
 # TODO
+# fix the generator code and make it mimic the manuscript well (top to bottom)
+# fi
 # normalize for page size
 # ordering is pretty wrog
 # make a nice evaluation metric
