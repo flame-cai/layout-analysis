@@ -5,14 +5,14 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import random
-import math
+from architecture import ReadingOrderTransformer
 
-MAX_LENGTH = 1000
+
+MAX_NO_POINTS = 1500
 
 class PointDataset(Dataset):
-    def __init__(self, data_dir, split_files, max_points=MAX_LENGTH, normalize=True):
+    def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True):
         self.data_dir = data_dir
         self.max_points = max_points
         self.normalize = normalize
@@ -77,61 +77,11 @@ class PointDataset(Dataset):
             'max_y': self.max_y
         }
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len=MAX_LENGTH):
-        super().__init__()
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        return x + self.pe[:x.size(0)]
-
-class ReadingOrderTransformer(nn.Module):
-    def __init__(self, d_model=64, nhead=4, num_encoder_layers=3, num_classes=MAX_LENGTH+2):  # MAX_LENGTH + start/end tokens
-        super().__init__()
-        
-        # Input embedding
-        self.input_embed = nn.Sequential(
-            nn.Linear(2, d_model),
-            nn.ReLU()
-        )
-        
-        # Positional encoding
-        self.pos_encoder = PositionalEncoding(d_model)
-        
-        # Transformer encoder
-        encoder_layers = TransformerEncoderLayer(d_model, nhead, dim_feedforward=256)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, num_encoder_layers)
-        
-        # Output layer
-        self.output = nn.Linear(d_model, num_classes)
-        
-    def forward(self, src):
-        # src shape: [batch_size, seq_len, 2]
-        
-        # Embed input
-        src = self.input_embed(src)  # [batch_size, seq_len, d_model]
-        src = src.transpose(0, 1)  # [seq_len, batch_size, d_model]
-        
-        # Add positional encoding
-        src = self.pos_encoder(src)
-        
-        # Transform
-        output = self.transformer_encoder(src)
-        
-        # Output layer
-        output = output.transpose(0, 1)  # [batch_size, seq_len, d_model]
-        output = self.output(output)  # [batch_size, seq_len, num_classes] [32, 100, 100]
-        
-        return output
 
 def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
     criterion = nn.CrossEntropyLoss(ignore_index=-1)
-    optimizer = optim.Adam(model.parameters())
+    #optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adadelta(model.parameters())
     
     model = model.to(device)
     best_val_loss = float('inf')
@@ -220,14 +170,14 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
             points_first_denorm = points_first
         
         # Create figure with two subplots
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(35, 35))
         fig.suptitle(f'Reading Order Analysis - Page {page_idx + 1}', 
                     fontsize=16, y=1.05)
         
         # Helper function to create consistent point and label plotting
         def plot_points_and_labels(ax, points, labels, title):
             # Plot only valid points (not padding)
-            valid_mask = labels != -1
+            valid_mask = (labels != -1) & (points[:, 0] >= 0) & (points[:, 1] >= 0)
             valid_points = points[valid_mask]
             valid_labels = labels[valid_mask]
             
@@ -285,7 +235,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Create datasets
-    all_files = [f.split('_')[1] for f in os.listdir('/home/kartik/layout-analysis/data/synthetic-data') if f.endswith('points.txt')]
+    all_files = [f.split('_')[1] for f in os.listdir('/mnt/cai-data/layout-analysis/synthetic-data') if f.endswith('points.txt')]
     random.shuffle(all_files)
     
     # Split files
@@ -293,17 +243,17 @@ def main():
     val_files = all_files[int(0.7*len(all_files)):int(0.85*len(all_files))]
     test_files = all_files[int(0.85*len(all_files)):]
     
-    train_dataset = PointDataset('/home/kartik/layout-analysis/data/synthetic-data', train_files)
-    val_dataset = PointDataset('/home/kartik/layout-analysis/data/synthetic-data', val_files)
-    test_dataset = PointDataset('/home/kartik/layout-analysis/data/synthetic-data', test_files)
+    train_dataset = PointDataset('/mnt/cai-data/layout-analysis/synthetic-data', train_files)
+    val_dataset = PointDataset('/mnt/cai-data/layout-analysis/synthetic-data', val_files)
+    test_dataset = PointDataset('/mnt/cai-data/layout-analysis/synthetic-data', test_files)
 
     train_norm_params = train_dataset.get_normalization_params()
     val_norm_params = val_dataset.get_normalization_params()
     test_norm_params = test_dataset.get_normalization_params()
     
     # Create data loaders
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32)
+    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=256)
     test_loader = DataLoader(test_dataset, batch_size=1)
     
     # Create and train model

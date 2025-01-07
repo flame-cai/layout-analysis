@@ -398,6 +398,8 @@ def process_image(folder_path):
 
     # for each image in the folder
     test_data_path = '/home/kartik/layout-analysis/data/test-data/'
+
+    pg_counter=0
     for image,_filename in zip(inp_images, file_names):
         # get region score and affinity score
         region_score, affinity_score = detect(image,detector, device)
@@ -412,14 +414,14 @@ def process_image(folder_path):
         # Save figure
         print(region_score.shape)
         print(points.shape)
-        np.savetxt(test_data_path+f'points_{_filename}.txt', points, fmt='%d')
+        np.savetxt(test_data_path+f'pg_{pg_counter}_points.txt', points, fmt='%d')
 
         fig = visualize_results(region_score, points)
         plt.show()
         plt.axis('off')  # Turn off the axis        
         #plt.savefig(f'/mnt/cai-data/layout-analysis/manuscripts/{m_name}/heatmaps/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
-        plt.savefig(f'/home/kartik/layout-analysis/analysis_images/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
-
+        #plt.savefig(f'/home/kartik/layout-analysis/analysis_images/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
+        pg_counter +=1
 
     print(f"{time.time()-st:.2f} seconds elapsed.....")
 
@@ -435,7 +437,7 @@ def process_image(folder_path):
 
 # Create the arg parser
 parser = argparse.ArgumentParser(description="A simple script to process a path")
-parser.add_argument('--path', type=str, help='The path to folder which contains leaf images', default="/mnt/cai-data/layout-analysis/manuscripts/Test/leaves")
+parser.add_argument('--path', type=str, help='The path to folder which contains leaf images', default="/mnt/cai-data/layout-analysis/manuscripts/DMV/leaves")
 
 args = parser.parse_args()
 folder_path = args.path

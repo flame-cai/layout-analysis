@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-CHARS_PER_LINE = 34  # max possible characters per line for single column
+CHARS_PER_LINE = 50  # max possible characters per line for single column
 
 def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_per_line_range=(30, 50),
                         footnotes_prob=0.2, footnote_length_range=(10, 30), layout_type='single'):
@@ -11,7 +11,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
     """
     points = []
     labels = []
-    current_label = 0
+    current_label = 1
     
     # Adjust parameters based on layout type
     if layout_type == 'double':
@@ -98,7 +98,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
                             y = footnote_y + line_offset * line_height * 0.7
                     
                     points.append([int(x), int(y)])
-                    labels.append(current_label)
+                    labels.append(0)
             
             current_label += 1
             y_position -= line_height
@@ -117,7 +117,7 @@ def generate_realistic_parameters():
         min_chars = random.randint(10, 12)  # Smaller range for double column
         max_chars = random.randint(15, CHARS_PER_LINE // 2)
     else:
-        min_chars = random.randint(20, 24)
+        min_chars = random.randint(10, 12)
         max_chars = random.randint(30, CHARS_PER_LINE)
     
     chars_per_line_range = (min_chars, max_chars)
@@ -157,3 +157,10 @@ for i in range(20000):
     points_file_name = f"pg_{i}_points.txt"
     labels_file_name = f"pg_{i}_labels.txt"
     save_points_and_labels(points, labels, points_file_name, labels_file_name)
+
+
+
+#TODO What to vary:
+# where line one starts
+# variance in lines
+# curvature of lines
