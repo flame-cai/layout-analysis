@@ -36,7 +36,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
     # Generate text for each column
     for col_idx, (left_margin, right_margin) in enumerate(zip(left_margins, right_margins)):
         char_spacing = (right_margin - left_margin) / chars_per_column
-        y_position = line_height  # Start from top with some margin
+        y_position = page_height - line_height  # Start from top with some margin
         
         # Adjust number of lines for double column to fill page
         col_lines = num_lines * 2 if layout_type == 'double' else num_lines
@@ -101,7 +101,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
                     labels.append(current_label)
             
             current_label += 1
-            y_position += line_height
+            y_position -= line_height
 
     return np.array(points), np.array(labels)
 
