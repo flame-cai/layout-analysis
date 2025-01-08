@@ -8,7 +8,8 @@ import os
 import random
 from architecture import ReadingOrderTransformer
 
-
+DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
+#DATA_PATH = "/mnt/cai-data/layout-analysis/synthetic-data"
 MAX_NO_POINTS = 1500
 
 class PointDataset(Dataset):
@@ -80,8 +81,8 @@ class PointDataset(Dataset):
 
 def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
     criterion = nn.CrossEntropyLoss(ignore_index=-1)
-    #optimizer = optim.Adam(model.parameters())
-    optimizer = optim.Adadelta(model.parameters())
+    optimizer = optim.Adam(model.parameters())
+    #optimizer = optim.Adadelta(model.parameters())
     
     model = model.to(device)
     best_val_loss = float('inf')
@@ -235,7 +236,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Create datasets
-    all_files = [f.split('_')[1] for f in os.listdir('/mnt/cai-data/layout-analysis/synthetic-data') if f.endswith('points.txt')]
+    all_files = [f.split('_')[1] for f in os.listdir(DATA_PATH) if f.endswith('points.txt')]
     random.shuffle(all_files)
     
     # Split files
@@ -243,22 +244,22 @@ def main():
     val_files = all_files[int(0.7*len(all_files)):int(0.85*len(all_files))]
     test_files = all_files[int(0.85*len(all_files)):]
     
-    train_dataset = PointDataset('/mnt/cai-data/layout-analysis/synthetic-data', train_files)
-    val_dataset = PointDataset('/mnt/cai-data/layout-analysis/synthetic-data', val_files)
-    test_dataset = PointDataset('/mnt/cai-data/layout-analysis/synthetic-data', test_files)
+    train_dataset = PointDataset(DATA_PATH, train_files)
+    val_dataset = PointDataset(DATA_PATH, val_files)
+    test_dataset = PointDataset(DATA_PATH, test_files)
 
     train_norm_params = train_dataset.get_normalization_params()
     val_norm_params = val_dataset.get_normalization_params()
     test_norm_params = test_dataset.get_normalization_params()
     
     # Create data loaders
-    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=256)
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=16)
     test_loader = DataLoader(test_dataset, batch_size=1)
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=2)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=5)
     
     # Load best model and evaluate
     model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))

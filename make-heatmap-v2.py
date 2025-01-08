@@ -407,7 +407,6 @@ def process_image(folder_path):
 
         # resize image to match the shape of the heatmaps
         image = cv2.resize(image, dsize=region_score.shape[::-1], interpolation=cv2.INTER_CUBIC)
-
         # Array of shape (N, 2) - x,y locations of each peak
         points = heatmap_to_pointcloud(region_score, min_peak_value=0.3, min_distance=10)
         print(points.shape[0])

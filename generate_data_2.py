@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-CHARS_PER_LINE = 50  # max possible characters per line for single column
+CHARS_PER_LINE = 60  # max possible characters per line for single column
 
 def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_per_line_range=(30, 50),
                         footnotes_prob=0.2, footnote_length_range=(10, 30), layout_type='single'):
@@ -11,15 +11,19 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
     """
     points = []
     labels = []
-    current_label = 1
+    current_label = 0
     
     # Adjust parameters based on layout type
     if layout_type == 'double':
         # For double column, split the content area in half
-        column_width = (page_width * 0.7) / 2  # 70% of page width split into two columns
+        column_width_decider = random.uniform(0.7, 0.8)  #0.8
+        gap = random.uniform(0.05, 0.1)
+        margin_width_decider = (1-column_width_decider+gap)/2 #0.05
+        
+        column_width = (page_width * column_width_decider) / 2  # 70% of page width split into two columns
         left_margins = [
-            page_width * 0.15,  # First column starts at 15% margin
-            page_width * 0.15 + column_width + (page_width * 0.1)  # Second column starts after first + gap
+            page_width * margin_width_decider,  # First column starts at 15% margin
+            page_width * margin_width_decider + column_width + (page_width * gap)  # Second column starts after first + gap
         ]
         right_margins = [
             left_margins[0] + column_width,  # First column end
@@ -27,11 +31,12 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
         ]
         chars_per_column = CHARS_PER_LINE // 2  # Reduce characters per line for each column
     else:  # single column
-        left_margins = [page_width * 0.15]  # 15% margin from left
-        right_margins = [page_width * 0.85]  # 15% margin from right
+        margin_ratio = random.uniform(0.08, 0.15)
+        left_margins = [page_width * margin_ratio]  # 15% margin from left
+        right_margins = [page_width * (1-margin_ratio)]  # 15% margin from right
         chars_per_column = CHARS_PER_LINE
     
-    line_height = page_height / (num_lines * 1.5)  # Allow space for footnotes
+    line_height = page_height / (num_lines * random.uniform(1.1, 1.5))  # Allow space for footnotes
     
     # Generate text for each column
     for col_idx, (left_margin, right_margin) in enumerate(zip(left_margins, right_margins)):
@@ -63,7 +68,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
             # Handle footnotes
             if random.random() < footnotes_prob:
                 footnote_length = random.randint(*footnote_length_range)
-                footnote_position = random.choice(['left', 'right', 'below'])
+                footnote_position = random.choice(['left', 'right'])
                 
                 # Adjust footnote positioning for columns
                 if footnote_position == 'left':
@@ -74,10 +79,10 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
                     footnote_x_start = right_margin + (page_width * 0.02)
                     footnote_y = y_position
                     char_spacing_factor = 0.8
-                else:  # below
-                    footnote_x_start = left_margin
-                    footnote_y = y_position + line_height * 0.7
-                    char_spacing_factor = 1
+                # else:  # below
+                #     footnote_x_start = left_margin
+                #     footnote_y = y_position + line_height * 0.7
+                #     char_spacing_factor = 1
                 
                 # Generate footnote characters
                 for char_num in range(footnote_length):
@@ -98,7 +103,7 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
                             y = footnote_y + line_offset * line_height * 0.7
                     
                     points.append([int(x), int(y)])
-                    labels.append(0)
+                    labels.append(current_label+70)
             
             current_label += 1
             y_position -= line_height
@@ -109,16 +114,16 @@ def generate_realistic_parameters():
     """Generate realistic variations in page layout parameters"""
     page_width = random.randint(1200, 1300)
     page_height = random.randint(500, 550)
-    num_lines = random.randint(5, 12)
+    num_lines = random.randint(7, 12)
     
     # Adjust character ranges based on layout type
     layout_type = random.choice(['single', 'double'])
     if layout_type == 'double':
-        min_chars = random.randint(10, 12)  # Smaller range for double column
-        max_chars = random.randint(15, CHARS_PER_LINE // 2)
+        min_chars = random.randint(14, 15)  # Smaller range for double column
+        max_chars = random.randint(23, CHARS_PER_LINE // 2)
     else:
-        min_chars = random.randint(10, 12)
-        max_chars = random.randint(30, CHARS_PER_LINE)
+        min_chars = random.randint(28, 30)
+        max_chars = random.randint(45, CHARS_PER_LINE)
     
     chars_per_line_range = (min_chars, max_chars)
     footnotes_prob = random.uniform(0.10, 0.20)

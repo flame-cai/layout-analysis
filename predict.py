@@ -48,7 +48,8 @@ class PointDataset(Dataset):
             # Normalize points if requested
             if normalize:
                 points[:, 0] = (points[:, 0] - self.min_x) / (self.max_x - self.min_x)
-                points[:, 1] = (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
+                #points[:, 1] = (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
+                points[:, 1] = 1 - (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
             
             # Shuffle points and labels together
             indices = list(range(len(points)))
