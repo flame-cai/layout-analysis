@@ -5,7 +5,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import math
 
 
-NUM_CLASSES = 140
+NUM_CLASSES = 40
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=NUM_CLASSES):
@@ -21,7 +21,7 @@ class PositionalEncoding(nn.Module):
         return x #+ self.pe[:x.size(0)]
 
 class ReadingOrderTransformer(nn.Module):
-    def __init__(self, d_model=128, nhead=8, num_encoder_layers=4, num_classes=NUM_CLASSES+2):  # NUM_CLASSES + start/end tokens
+    def __init__(self, d_model=64, nhead=4, num_encoder_layers=3, num_classes=NUM_CLASSES+2):  # NUM_CLASSES + start/end tokens
         super().__init__()
         
         # Input embedding

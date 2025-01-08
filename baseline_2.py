@@ -10,7 +10,7 @@ from architecture import ReadingOrderTransformer
 
 DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
 #DATA_PATH = "/mnt/cai-data/layout-analysis/synthetic-data"
-MAX_NO_POINTS = 1500
+MAX_NO_POINTS = 1000
 
 class PointDataset(Dataset):
     def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True):
@@ -46,8 +46,9 @@ class PointDataset(Dataset):
             # Normalize points if requested
             if normalize:
                 points[:, 0] = (points[:, 0] - self.min_x) / (self.max_x - self.min_x)
-                points[:, 1] = (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
-            
+                #points[:, 1] = (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
+                points[:, 1] = 1 - (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
+
             # Shuffle points and labels together
             indices = list(range(len(points)))
             random.shuffle(indices)
@@ -171,7 +172,7 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
             points_first_denorm = points_first
         
         # Create figure with two subplots
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(35, 35))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(27, 27))
         fig.suptitle(f'Reading Order Analysis - Page {page_idx + 1}', 
                     fontsize=16, y=1.05)
         

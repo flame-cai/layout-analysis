@@ -7,7 +7,7 @@ import random
 from architecture import ReadingOrderTransformer
 
 
-MAX_NO_POINTS = 1500
+MAX_NO_POINTS = 1000
 
 
 class PointDataset(Dataset):

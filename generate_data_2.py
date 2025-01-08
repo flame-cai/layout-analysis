@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-CHARS_PER_LINE = 60  # max possible characters per line for single column
+CHARS_PER_LINE = 38  # max possible characters per line for single column
 
 def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_per_line_range=(30, 50),
                         footnotes_prob=0.2, footnote_length_range=(10, 30), layout_type='single'):
@@ -114,19 +114,19 @@ def generate_realistic_parameters():
     """Generate realistic variations in page layout parameters"""
     page_width = random.randint(1200, 1300)
     page_height = random.randint(500, 550)
-    num_lines = random.randint(7, 12)
+    num_lines = random.randint(7, 15)
     
     # Adjust character ranges based on layout type
-    layout_type = random.choice(['single', 'double'])
+    layout_type = random.choice(['single', 'single'])
     if layout_type == 'double':
         min_chars = random.randint(14, 15)  # Smaller range for double column
         max_chars = random.randint(23, CHARS_PER_LINE // 2)
     else:
-        min_chars = random.randint(28, 30)
-        max_chars = random.randint(45, CHARS_PER_LINE)
+        min_chars = random.randint(30, 32)
+        max_chars = random.randint(34, CHARS_PER_LINE)
     
     chars_per_line_range = (min_chars, max_chars)
-    footnotes_prob = random.uniform(0.10, 0.20)
+    footnotes_prob = 0.0 #random.uniform(0.10, 0.20)
     
     min_footnote = random.randint(1, 4)
     max_footnote = random.randint(8, 10)
@@ -146,7 +146,9 @@ def generate_realistic_parameters():
 
 def save_points_and_labels(points, labels, points_file="points.txt", labels_file="labels.txt"):
     """Save points and labels to separate filess"""
-    path = '/home/kartik/layout-analysis/data/synthetic-data/'
+    DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data/"
+    #DATA_PATH = "/mnt/cai-data/layout-analysis/synthetic-data/"
+    path = DATA_PATH
     
     # Save original points and labels
     np.savetxt(path+points_file, points, fmt='%d', delimiter=' ')
