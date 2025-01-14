@@ -17,6 +17,8 @@
       @mousemove="handleMouseMove"
       @keydown.x="startAnnotation"
       @keyup.x="finishAnnotation"
+      @keydown.f="startFootnoteAnnotation"
+      @keyup.f="finishFootnoteAnnotation"
       tabindex="0"
     >
       <canvas ref="canvas"></canvas>
@@ -35,6 +37,7 @@ export default {
       isCtrlPressed: false,
       ctx: null,
       currentLabel: 0,
+      tempLabel: 0,
       margin: 50  // margin in pixels
     }
   },
@@ -150,6 +153,18 @@ export default {
     finishAnnotation() {
       this.isCtrlPressed = false
       this.currentLabel += 1  // Increment label for next annotation
+    },
+
+    startFootnoteAnnotation() {
+      this.isCtrlPressed = true
+      this.tempLabel = this.currentLabel
+      this.currentLabel = 50
+    },
+    
+    finishFootnoteAnnotation() {
+      this.isCtrlPressed = false
+      this.currentLabel = this.tempLabel  // Increment label for next annotation
+
     },
     
     async saveLabelsSwitchPage() {
