@@ -10,7 +10,7 @@ from architecture import ReadingOrderTransformer
 
 DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
 #DATA_PATH = "/mnt/cai-data/layout-analysis/synthetic-data"
-MAX_NO_POINTS = 1000
+MAX_NO_POINTS = 1200
 
 class PointDataset(Dataset):
     def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True):
@@ -42,6 +42,12 @@ class PointDataset(Dataset):
             
             points = np.loadtxt(points_file)
             labels = np.loadtxt(labels_file).astype(int)
+
+            # Pad if necessary
+            if len(points) < max_points:
+                pad_length = max_points - len(points)
+                points = np.pad(points, ((0, pad_length), (0, 0)), mode='constant')
+                labels = np.pad(labels, (0, pad_length), mode='constant', constant_values=-1)
             
             # Normalize points if requested
             if normalize:
@@ -55,12 +61,7 @@ class PointDataset(Dataset):
             points = points[indices]
             labels = labels[indices]
             
-            # Pad if necessary
-            if len(points) < max_points:
-                pad_length = max_points - len(points)
-                points = np.pad(points, ((0, pad_length), (0, 0)), mode='constant')
-                labels = np.pad(labels, (0, pad_length), mode='constant', constant_values=-1)
-                
+
             self.examples.append((points, labels))
     
     def __len__(self):
@@ -166,7 +167,9 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
             points_first_denorm = points_first.clone()
             points_first_denorm[:, 0] = (points_first[:, 0] * 
                 (norm_params['max_x'] - norm_params['min_x']) + norm_params['min_x'])
-            points_first_denorm[:, 1] = (points_first[:, 1] * 
+            # points_first_denorm[:, 1] = (points_first[:, 1] * 
+            #     (norm_params['max_y'] - norm_params['min_y']) + norm_params['min_y'])
+            points_first_denorm[:, 1] = ((1 - points_first[:, 1]) * 
                 (norm_params['max_y'] - norm_params['min_y']) + norm_params['min_y'])
         else:
             points_first_denorm = points_first
@@ -179,7 +182,7 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
         # Helper function to create consistent point and label plotting
         def plot_points_and_labels(ax, points, labels, title):
             # Plot only valid points (not padding)
-            valid_mask = (labels != -1) & (points[:, 0] >= 0) & (points[:, 1] >= 0)
+            valid_mask = (labels != -1) #& (points[:, 0] >= 0) & (points[:, 1] >= 0)
             valid_points = points[valid_mask]
             valid_labels = labels[valid_mask]
             
@@ -260,7 +263,7 @@ def main():
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=5)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=2)
     
     # Load best model and evaluate
     model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))

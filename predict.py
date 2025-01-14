@@ -7,7 +7,7 @@ import random
 from architecture import ReadingOrderTransformer
 
 
-MAX_NO_POINTS = 1000
+MAX_NO_POINTS = 1200
 
 
 class PointDataset(Dataset):
@@ -44,6 +44,14 @@ class PointDataset(Dataset):
 
             if self.prediction_mode == False:
                 labels = np.loadtxt(labels_file).astype(int)
+
+                        # Pad if necessary
+            if len(points) < max_points:
+                pad_length = max_points - len(points)
+                points = np.pad(points, ((0, pad_length), (0, 0)), mode='constant')
+
+                if self.prediction_mode == False:
+                    labels = np.pad(labels, (0, pad_length), mode='constant', constant_values=-1)
             
             # Normalize points if requested
             if normalize:
@@ -57,15 +65,7 @@ class PointDataset(Dataset):
             points = points[indices]
             if self.prediction_mode == False:
                 labels = labels[indices]
-            
-            # Pad if necessary
-            if len(points) < max_points:
-                pad_length = max_points - len(points)
-                points = np.pad(points, ((0, pad_length), (0, 0)), mode='constant')
-
-                if self.prediction_mode == False:
-                    labels = np.pad(labels, (0, pad_length), mode='constant', constant_values=-1)
-                
+                            
             if self.prediction_mode == False:
                 self.examples.append((points, labels))
             else: # just order the points roughly
@@ -131,7 +131,9 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
             points_first_denorm = points_first.clone()
             points_first_denorm[:, 0] = (points_first[:, 0] * 
                 (norm_params['max_x'] - norm_params['min_x']) + norm_params['min_x'])
-            points_first_denorm[:, 1] = (points_first[:, 1] * 
+            # points_first_denorm[:, 1] = (points_first[:, 1] * 
+            #     (norm_params['max_y'] - norm_params['min_y']) + norm_params['min_y'])
+            points_first_denorm[:, 1] = ((1 - points_first[:, 1]) * 
                 (norm_params['max_y'] - norm_params['min_y']) + norm_params['min_y'])
         else:
             points_first_denorm = points_first

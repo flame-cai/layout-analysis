@@ -5,7 +5,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import math
 
 
-NUM_CLASSES = 40
+NUM_CLASSES = 60
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=NUM_CLASSES):
@@ -48,7 +48,7 @@ class ReadingOrderTransformer(nn.Module):
         src = src.transpose(0, 1)  # [seq_len, batch_size, d_model]
         
         # Add positional encoding
-        src = self.pos_encoder(src)
+        # src = self.pos_encoder(src)
         
         # Transform
         output = self.transformer_encoder(src)

@@ -44,16 +44,16 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
         y_position = page_height - line_height  # Start from top with some margin
         
         # Adjust number of lines for double column to fill page
-        col_lines = num_lines * 2 if layout_type == 'double' else num_lines
+        col_lines = num_lines #* 2 if layout_type == 'double' else num_lines
         
         # Generate main text lines for this column
         for line_num in range(col_lines):
             # Adjust character range for column width
-            adjusted_range = (
-                min(chars_per_line_range[0], chars_per_column),
-                min(chars_per_line_range[1], chars_per_column)
-            )
-            num_chars = random.randint(*adjusted_range)
+            # adjusted_range = (
+            #     min(chars_per_line_range[0], chars_per_column),
+            #     min(chars_per_line_range[1], chars_per_column)
+            # )
+            num_chars = random.randint(*chars_per_line_range)
             
             # Generate character positions for this line
             for char_num in range(num_chars):
@@ -117,10 +117,10 @@ def generate_realistic_parameters():
     num_lines = random.randint(7, 15)
     
     # Adjust character ranges based on layout type
-    layout_type = random.choice(['single', 'single'])
+    layout_type = random.choice(['single', 'double'])
     if layout_type == 'double':
         min_chars = random.randint(14, 15)  # Smaller range for double column
-        max_chars = random.randint(23, CHARS_PER_LINE // 2)
+        max_chars = random.randint(17, CHARS_PER_LINE // 2)
     else:
         min_chars = random.randint(30, 32)
         max_chars = random.randint(34, CHARS_PER_LINE)
