@@ -4,22 +4,22 @@
     <div class="controls">
       <div class="page-info">
         <span>Current Page: {{ currentPage }}</span>
-        <span class="label-info">Current Label: {{ currentLabel }}</span>
+        <span class="label-info">Current Label: {{ displayCurrentLabel }}</span>
         <button @click="saveLabelsSwitchPage">Save & Next Page</button>
-      </div>
-      <div class="instructions">
-        <p>Hold Ctrl and hover over points to annotate them. Release Ctrl to move to next label.</p>
+        <button @click="toggleFootnoteMode" :class="{ active: isFootnoteMode }">
+          Footnote Mode (f)
+        </button>
       </div>
     </div>
     
     <div 
       class="canvas-container" 
       @mousemove="handleMouseMove"
-      @keydown.x="startAnnotation"
-      @keyup.x="finishAnnotation"
-      @keydown.f="startFootnoteAnnotation"
-      @keyup.f="finishFootnoteAnnotation"
+      @keydown.d="startAnnotation"
+      @keyup.d="finishAnnotation"
+      @keydown.f="toggleFootnoteMode"
       tabindex="0"
+      ref="canvasContainer"
     >
       <canvas ref="canvas"></canvas>
     </div>
@@ -27,6 +27,8 @@
 </template>
 
 <script>
+const API_BASE_URL = 'http://localhost:5000/api';
+
 export default {
   name: 'App',
   data() {
@@ -37,18 +39,28 @@ export default {
       isCtrlPressed: false,
       ctx: null,
       currentLabel: 0,
-      tempLabel: 0,
-      margin: 50  // margin in pixels
+      margin: 50,
+      isFootnoteMode: false
+    }
+  },
+  computed: {
+    displayCurrentLabel() {
+      return this.isFootnoteMode ? 'f' : this.currentLabel.toString()
     }
   },
   mounted() {
     this.ctx = this.$refs.canvas.getContext('2d')
     this.loadPoints()
+    // Focus the canvas container for keyboard events
+    this.$refs.canvasContainer.focus()
   },
   methods: {
     async loadPoints() {
       try {
-        const response = await fetch(`/test-data/pg_${this.currentPage}_points.txt`)
+        const response = await fetch(`${API_BASE_URL}/points/${this.currentPage}`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
         const text = await response.text()
         this.points = text.trim().split('\n').map(line => {
           const [x, y] = line.split(' ').map(Number)
@@ -59,6 +71,7 @@ export default {
         this.drawPoints()
       } catch (error) {
         console.error('Error loading points:', error)
+        alert(`Error loading points for page ${this.currentPage}. Please check if the server is running and data files exist.`)
       }
     },
     
@@ -168,13 +181,31 @@ export default {
     },
     
     async saveLabelsSwitchPage() {
-      const labelsText = this.labels.join('\n')
-      console.log(`Saving to pg_${this.currentPage}_labels.txt:`)
-      console.log(labelsText)
-      
-      this.currentPage++
-      this.currentLabel = 0  // Reset label counter for new page
-      await this.loadPoints()
+      try {
+        const response = await fetch(`${API_BASE_URL}/save-labels`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            page: this.currentPage,
+            labels: this.labels
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        await response.json()
+        this.currentPage++
+        this.currentLabel = 0
+        this.isFootnoteMode = false
+        await this.loadPoints()
+      } catch (error) {
+        console.error('Error saving labels:', error)
+        alert('Error saving labels. Please check if the server is running and has write permissions.')
+      }
     }
   }
 }
