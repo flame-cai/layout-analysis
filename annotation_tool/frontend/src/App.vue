@@ -18,6 +18,7 @@
       @keydown.d="startAnnotation"
       @keyup.d="finishAnnotation"
       @keydown.f="toggleFootnoteMode"
+      @keydown.ctrl.z.prevent="handleUndo"
       tabindex="0"
       ref="canvasContainer"
     >
@@ -28,6 +29,7 @@
 
 <script>
 const API_BASE_URL = 'http://localhost:5000/api';
+const FOOTNOTE_LABEL = 'f';
 
 export default {
   name: 'App',
@@ -40,19 +42,26 @@ export default {
       ctx: null,
       currentLabel: 0,
       margin: 50,
-      isFootnoteMode: false
+      isFootnoteMode: false,
+      undoHistory: [], // Stack to store annotation actions for undo
+      currentAnnotationBatch: null // Store current batch of annotations
     }
   },
   computed: {
     displayCurrentLabel() {
-      return this.isFootnoteMode ? 'f' : this.currentLabel.toString()
+      return this.isFootnoteMode ? FOOTNOTE_LABEL : this.currentLabel.toString()
     }
   },
   mounted() {
     this.ctx = this.$refs.canvas.getContext('2d')
     this.loadPoints()
-    // Focus the canvas container for keyboard events
     this.$refs.canvasContainer.focus()
+
+    // Add keyboard event listener for undo
+    window.addEventListener('keydown', this.handleKeyDown)
+  },
+  beforeDestroy() {
+    window.removeEventListener('keydown', this.handleKeyDown)
   },
   methods: {
     async loadPoints() {
@@ -62,13 +71,14 @@ export default {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
         const text = await response.text()
-        this.points = text.trim().split('\n').map(line => {
+        this.points = text.trim().split('\n').map((line, index) => {
           const [x, y] = line.split(' ').map(Number)
-          return { x, y, label: null }
+          return { x, y, index, label: null } // Store original index
         })
         this.labels = new Array(this.points.length).fill(null)
         this.updateCanvasSize()
         this.drawPoints()
+        this.undoHistory = [] // Clear undo history when loading new points
       } catch (error) {
         console.error('Error loading points:', error)
         alert(`Error loading points for page ${this.currentPage}. Please check if the server is running and data files exist.`)
@@ -83,32 +93,26 @@ export default {
       const minY = Math.min(...yCoords)
       const maxY = Math.max(...yCoords)
       
-      // Calculate dimensions with margins
       let width = maxX - minX + (this.margin * 2)
       let height = maxY - minY + (this.margin * 2)
       
-      // Get container dimensions
       const container = document.querySelector('.container')
-      const maxWidth = container.clientWidth - 40  // subtract padding
-      const maxHeight = window.innerHeight - 200   // subtract space for controls
+      const maxWidth = container.clientWidth - 40
+      const maxHeight = window.innerHeight - 200
       
-      // Calculate scale if needed
       const scale = Math.min(
         maxWidth / width,
         maxHeight / height,
-        1  // Don't scale up, only down
+        1
       )
       
-      // Apply scale
       width *= scale
       height *= scale
       
-      // Update canvas size
       const canvas = this.$refs.canvas
       canvas.width = width
       canvas.height = height
       
-      // Adjust point coordinates
       const scaleX = (width - this.margin * 2) / (maxX - minX)
       const scaleY = (height - this.margin * 2) / (maxY - minY)
       this.points = this.points.map(point => ({
@@ -121,14 +125,17 @@ export default {
     drawPoints() {
       this.ctx.clearRect(0, 0, this.$refs.canvas.width, this.$refs.canvas.height)
       
-      // Draw all points
       this.points.forEach((point, index) => {
         this.ctx.beginPath()
         this.ctx.arc(point.x, point.y, 5, 0, Math.PI * 2)
         
-        if (this.labels[index] !== null) {
-          const hue = (this.labels[index] * 137.5) % 360
-          this.ctx.fillStyle = `hsl(${hue}, 70%, 50%)`
+        if (this.labels[point.index] !== null) {
+          if (this.labels[point.index] === FOOTNOTE_LABEL) {
+            this.ctx.fillStyle = 'purple' // Special color for footnotes
+          } else {
+            const hue = (this.labels[point.index] * 137.5) % 360
+            this.ctx.fillStyle = `hsl(${hue}, 70%, 50%)`
+          }
         } else {
           this.ctx.fillStyle = 'gray'
         }
@@ -145,7 +152,6 @@ export default {
       const x = (event.clientX - rect.left) / scale
       const y = (event.clientY - rect.top) / scale
       
-      // Find and label the closest point
       const closePoint = this.points.findIndex(point => {
         const distance = Math.sqrt(
           Math.pow(point.x - x, 2) + Math.pow(point.y - y, 2)
@@ -154,34 +160,66 @@ export default {
       })
       
       if (closePoint !== -1) {
-        this.labels[closePoint] = this.currentLabel
-        this.drawPoints()
+        const point = this.points[closePoint]
+        const oldLabel = this.labels[point.index]
+        const newLabel = this.isFootnoteMode ? FOOTNOTE_LABEL : this.currentLabel
+
+        // Only add to current batch if label actually changed
+        if (oldLabel !== newLabel) {
+          this.labels[point.index] = newLabel
+          
+          // Add to current annotation batch
+          if (this.currentAnnotationBatch === null) {
+            this.currentAnnotationBatch = []
+          }
+          this.currentAnnotationBatch.push({
+            pointIndex: point.index,
+            oldLabel,
+            newLabel
+          })
+          
+          this.drawPoints()
+        }
       }
     },
     
     startAnnotation() {
       this.isCtrlPressed = true
+      this.currentAnnotationBatch = [] // Initialize new batch
     },
     
     finishAnnotation() {
       this.isCtrlPressed = false
-      this.currentLabel += 1  // Increment label for next annotation
+      if (this.currentAnnotationBatch && this.currentAnnotationBatch.length > 0) {
+        this.undoHistory.push(this.currentAnnotationBatch) // Save batch to undo history
+      }
+      this.currentAnnotationBatch = null
+      if (!this.isFootnoteMode) {
+        this.currentLabel += 1 // Only increment for normal mode
+      }
     },
 
-    startFootnoteAnnotation() {
-      this.isCtrlPressed = true
-      this.tempLabel = this.currentLabel
-      this.currentLabel = 50
+    toggleFootnoteMode() {
+      this.isFootnoteMode = !this.isFootnoteMode
     },
     
-    finishFootnoteAnnotation() {
-      this.isCtrlPressed = false
-      this.currentLabel = this.tempLabel  // Increment label for next annotation
-
+    handleUndo() {
+      if (this.undoHistory.length > 0) {
+        const lastBatch = this.undoHistory.pop()
+        lastBatch.forEach(({ pointIndex, oldLabel }) => {
+          this.labels[pointIndex] = oldLabel
+        })
+        this.drawPoints()
+      }
     },
     
     async saveLabelsSwitchPage() {
       try {
+        // Create array of labels in original point order
+        const orderedLabels = this.labels.map(label => 
+          label === FOOTNOTE_LABEL ? -1 : label // Convert footnote label to -1 for backend
+        )
+
         const response = await fetch(`${API_BASE_URL}/save-labels`, {
           method: 'POST',
           headers: {
@@ -189,7 +227,7 @@ export default {
           },
           body: JSON.stringify({
             page: this.currentPage,
-            labels: this.labels
+            labels: orderedLabels
           })
         })
 
@@ -201,6 +239,7 @@ export default {
         this.currentPage++
         this.currentLabel = 0
         this.isFootnoteMode = false
+        this.undoHistory = [] // Clear undo history for new page
         await this.loadPoints()
       } catch (error) {
         console.error('Error saving labels:', error)
