@@ -87,8 +87,8 @@ def generate_text_layout(page_width=1250, page_height=532, num_lines=20, chars_p
                 # Generate footnote characters
                 for char_num in range(footnote_length):
                     x = footnote_x_start + char_num * char_spacing * char_spacing_factor
-                    x += random.uniform(-1, 1)
-                    y = footnote_y + random.uniform(-1, 1)
+                    x += random.uniform(-1.5, 1.5)
+                    y = footnote_y + random.uniform(-1.5, 1.5)
                     
                     # Handle footnote wrapping
                     if footnote_position in ['left', 'right']:
@@ -117,7 +117,10 @@ def generate_realistic_parameters():
     num_lines = random.randint(7, 15)
     
     # Adjust character ranges based on layout type
-    layout_type = random.choice(['single', 'double'])
+    # layout_type = random.choice(['single', 'double'])
+    probabilities = [0.5, 0.5]  # 70% chance for 'single', 30% for 'double'
+    layout_type = random.choices(['single', 'double'], weights=probabilities, k=1)[0]
+
     if layout_type == 'double':
         min_chars = random.randint(14, 15)  # Smaller range for double column
         max_chars = random.randint(17, CHARS_PER_LINE // 2)
@@ -156,7 +159,7 @@ def save_points_and_labels(points, labels, points_file="points.txt", labels_file
 
     
 # Generate the dataset
-for i in range(20000):
+for i in range(10000):
     params = generate_realistic_parameters()
     points, labels = generate_text_layout(**params)
     

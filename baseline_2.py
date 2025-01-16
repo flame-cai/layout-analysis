@@ -1,84 +1,16 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-import numpy as np
+from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import os
 import random
 from architecture import ReadingOrderTransformer
+from data_loading import *
 
 DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
 #DATA_PATH = "/mnt/cai-data/layout-analysis/synthetic-data"
-MAX_NO_POINTS = 1200
 
-class PointDataset(Dataset):
-    def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True):
-        self.data_dir = data_dir
-        self.max_points = max_points
-        self.normalize = normalize
-        self.examples = []
-        
-        # Keep track of min/max coordinates for normalization
-        self.min_x = float('inf')
-        self.min_y = float('inf')
-        self.max_x = float('-inf')
-        self.max_y = float('-inf')
-        
-        # First pass: find min/max coordinates if normalizing
-        if normalize:
-            for file in split_files:
-                points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
-                points = np.loadtxt(points_file)
-                self.min_x = min(self.min_x, points[:, 0].min())
-                self.min_y = min(self.min_y, points[:, 1].min())
-                self.max_x = max(self.max_x, points[:, 0].max())
-                self.max_y = max(self.max_y, points[:, 1].max())
-        
-        # Second pass: load and process data
-        for file in split_files:
-            points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
-            labels_file = os.path.join(data_dir, f"pg_{file}_labels.txt")
-            
-            points = np.loadtxt(points_file)
-            labels = np.loadtxt(labels_file).astype(int)
-
-            # Pad if necessary
-            if len(points) < max_points:
-                pad_length = max_points - len(points)
-                points = np.pad(points, ((0, pad_length), (0, 0)), mode='constant')
-                labels = np.pad(labels, (0, pad_length), mode='constant', constant_values=-1)
-            
-            # Normalize points if requested
-            if normalize:
-                points[:, 0] = (points[:, 0] - self.min_x) / (self.max_x - self.min_x)
-                #points[:, 1] = (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
-                points[:, 1] = 1 - (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
-
-            # Shuffle points and labels together
-            indices = list(range(len(points)))
-            random.shuffle(indices)
-            points = points[indices]
-            labels = labels[indices]
-            
-
-            self.examples.append((points, labels))
-    
-    def __len__(self):
-        return len(self.examples)
-    
-    def __getitem__(self, idx):
-        points, labels = self.examples[idx]
-        return torch.FloatTensor(points), torch.LongTensor(labels)
-    
-    def get_normalization_params(self):
-        """Return normalization parameters for use in evaluation"""
-        return {
-            'min_x': self.min_x,
-            'max_x': self.max_x,
-            'min_y': self.min_y,
-            'max_y': self.max_y
-        }
 
 
 def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
@@ -252,9 +184,9 @@ def main():
     val_files = all_files[int(0.7*len(all_files)):int(0.85*len(all_files))]
     test_files = all_files[int(0.85*len(all_files)):]
     
-    train_dataset = PointDataset(DATA_PATH, train_files)
-    val_dataset = PointDataset(DATA_PATH, val_files)
-    test_dataset = PointDataset(DATA_PATH, test_files)
+    train_dataset = PointDataset(DATA_PATH, train_files, labels_mode=True)
+    val_dataset = PointDataset(DATA_PATH, val_files, labels_mode=True)
+    test_dataset = PointDataset(DATA_PATH, test_files, labels_mode=True)
 
     train_norm_params = train_dataset.get_normalization_params()
     val_norm_params = val_dataset.get_normalization_params()
@@ -267,7 +199,7 @@ def main():
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=2)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=3)
     
     # Load best model and evaluate
     model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))

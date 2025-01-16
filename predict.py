@@ -1,91 +1,13 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
-import numpy as np
+from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import os
 import random
 from architecture import ReadingOrderTransformer
+from data_loading import *
 
 
-MAX_NO_POINTS = 1200
 
-
-class PointDataset(Dataset):
-    def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True, prediction_mode = True):
-        self.data_dir = data_dir
-        self.max_points = max_points
-        self.normalize = normalize
-        self.examples = []
-        self.prediction_mode = prediction_mode
-        
-        # Keep track of min/max coordinates for normalization
-        self.min_x = float('inf')
-        self.min_y = float('inf')
-        self.max_x = float('-inf')
-        self.max_y = float('-inf')
-        
-        # First pass: find min/max coordinates if normalizing
-        if normalize:
-            for file in split_files:
-                points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
-                points = np.loadtxt(points_file)
-                self.min_x = min(self.min_x, points[:, 0].min())
-                self.min_y = min(self.min_y, points[:, 1].min())
-                self.max_x = max(self.max_x, points[:, 0].max())
-                self.max_y = max(self.max_y, points[:, 1].max())
-        
-        # Second pass: load and process data
-        for file in split_files:
-            points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
-            if self.prediction_mode == False:
-                labels_file = os.path.join(data_dir, f"pg_{file}_labels.txt")
-            
-            points = np.loadtxt(points_file)
-
-            if self.prediction_mode == False:
-                labels = np.loadtxt(labels_file).astype(int)
-
-                        # Pad if necessary
-            if len(points) < max_points:
-                pad_length = max_points - len(points)
-                points = np.pad(points, ((0, pad_length), (0, 0)), mode='constant')
-
-                if self.prediction_mode == False:
-                    labels = np.pad(labels, (0, pad_length), mode='constant', constant_values=-1)
-            
-            # Normalize points if requested
-            if normalize:
-                points[:, 0] = (points[:, 0] - self.min_x) / (self.max_x - self.min_x)
-                #points[:, 1] = (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
-                points[:, 1] = 1 - (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
-            
-            # Shuffle points and labels together
-            indices = list(range(len(points)))
-            random.shuffle(indices)
-            points = points[indices]
-            if self.prediction_mode == False:
-                labels = labels[indices]
-                            
-            if self.prediction_mode == False:
-                self.examples.append((points, labels))
-            else: # just order the points roughly
-                self.examples.append((points, np.array([i for i in range(len(points))])))
-    def __len__(self):
-        return len(self.examples)
-    
-    def __getitem__(self, idx):
-        points, labels = self.examples[idx]
-        return torch.FloatTensor(points), torch.LongTensor(labels)
-    
-    def get_normalization_params(self):
-        """Return normalization parameters for use in evaluation"""
-        return {
-            'min_x': self.min_x,
-            'max_x': self.max_x,
-            'min_y': self.min_y,
-            'max_y': self.max_y
-        }
-    
 def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm_params=None):
     """
     Evaluate the model and create visualizations for multiple test pages.
@@ -119,10 +41,36 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
         _first = _[0]
         
         # Get model predictions
+        # with torch.no_grad():
+        #     output = model(points_first.unsqueeze(0))
+        #     print(output[0].argmax(dim=-1).shape)
+        #     pred_labels = output[0].argmax(dim=-1).cpu()
+
         with torch.no_grad():
             output = model(points_first.unsqueeze(0))
-            pred_labels = output[0].argmax(dim=-1).cpu()
+            probabilities = torch.softmax(output[0], dim=-1)  # Convert logits to probabilities
+            topk_probs, topk_indices = probabilities.topk(k=3, dim=-1)  # Get top 3 predictions
+            # Example: Choose the one with the highest probability among top-k
+            pred_labels = topk_indices[:, 0].cpu()
+
+        # with torch.no_grad():
+        #     output = model(points_first.unsqueeze(0))
+        #     probabilities = torch.softmax(output[0], dim=-1)  # Convert logits to probabilities
+        #     entropy = -torch.sum(probabilities * torch.log(probabilities + 1e-8), dim=-1)
+        #     low_entropy_mask = entropy < 1.0  # Example threshold for low entropy
+        #     pred_labels = torch.where(
+        #         low_entropy_mask,
+        #         probabilities.argmax(dim=-1),
+        #         torch.tensor(-1, device=output.device)  # Use -1 for uncertain predictions
+        #     ).cpu()
+
+
+
+        # Convert to a tensor if needed
+        pred_labels = torch.tensor(pred_labels)
         
+
+
         # Move points back to CPU
         points_first = points_first.cpu()
         
@@ -213,7 +161,7 @@ def main():
     random.shuffle(all_files)
     
     test_files = all_files
-    test_dataset = PointDataset('/home/kartik/layout-analysis/data/test-data', test_files)
+    test_dataset = PointDataset('/home/kartik/layout-analysis/data/test-data', test_files, labels_mode=False)
     test_norm_params = test_dataset.get_normalization_params()
     
     # Create data loaders
