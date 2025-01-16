@@ -347,10 +347,12 @@ def heatmap_to_pointcloud(heatmap, min_peak_value=0.3, min_distance=10):
     points = []
     
     # For each peak, generate points
+    height = heatmap.shape[0]  # Get the height of the heatmap
     for peak_idx in range(1, num_peaks + 1):
         # Get peak location
         peak_y, peak_x = np.where(labeled_peaks == peak_idx)[0][0], np.where(labeled_peaks == peak_idx)[1][0]
-        points.append([peak_x, peak_y])
+        #points.append([peak_x, peak_y])
+        points.append([peak_x, height - 1 - peak_y])  # This line is modified
 
     return np.array(points)
 

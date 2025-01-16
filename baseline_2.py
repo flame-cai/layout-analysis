@@ -211,6 +211,10 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
             ax.grid(True, linestyle='--', alpha=0.7)
             ax.set_xlabel('X Coordinate', fontsize=12)
             ax.set_ylabel('Y Coordinate', fontsize=12)
+            x_ticks = list(range(0, 1301, 100))
+            y_ticks = list(range(0, 551, 100))
+            ax.set_xticks(x_ticks)
+            ax.set_yticks(y_ticks)
             
             return scatter
         
