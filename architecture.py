@@ -5,7 +5,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import math
 
 
-NUM_CLASSES = 80
+NUM_CLASSES = 5
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=NUM_CLASSES):

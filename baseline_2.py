@@ -199,7 +199,7 @@ def main():
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=100)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=3)
     
     # Load best model and evaluate
     model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))
