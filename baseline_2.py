@@ -8,8 +8,8 @@ import random
 from architecture import ReadingOrderTransformer
 from data_loading import *
 
-DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
-#DATA_PATH = "/mnt/cai-data/layout-analysis/synthetic-data"
+#DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
+DATA_PATH = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data"
 
 
 
@@ -52,7 +52,7 @@ def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
         # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), '/home/kartik/layout-analysis/models/best_model.pt')
+            torch.save(model.state_dict(), '/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt')
 
 def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm_params=None):
     """
@@ -176,7 +176,8 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Create datasets
-    all_files = [f.split('_')[1] for f in os.listdir(DATA_PATH) if f.endswith('points.txt')]
+    #all_files = [f.split('_')[1] for f in os.listdir(DATA_PATH) if f.endswith('points.txt')]
+    all_files = [f.split('__')[0] for f in os.listdir(DATA_PATH) if f.endswith('__points.txt')]
     random.shuffle(all_files)
     
     # Split files
@@ -199,10 +200,10 @@ def main():
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=3)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=1)
     
-    # Load best model and evaluate
-    model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))
+    # Load best model and evaluate 
+    model.load_state_dict(torch.load('/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt'))
     evaluate_and_visualize(model, test_loader, device=device, norm_params=test_norm_params)
 
 if __name__ == "__main__":

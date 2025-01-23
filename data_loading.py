@@ -25,7 +25,7 @@ class PointDataset(Dataset):
         # First pass: find min/max coordinates if normalizing
         if normalize:
             for file in split_files:
-                points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
+                points_file = os.path.join(data_dir, f"{file}__points.txt")
                 points = np.loadtxt(points_file)
                 self.min_x = min(self.min_x, points[:, 0].min())
                 self.min_y = min(self.min_y, points[:, 1].min())
@@ -34,10 +34,10 @@ class PointDataset(Dataset):
         
         # Second pass: load and process data
         for file in split_files:
-            points_file = os.path.join(data_dir, f"pg_{file}_points.txt")
+            points_file = os.path.join(data_dir, f"{file}__points.txt")
             points = np.loadtxt(points_file)
             if self.labels_mode == True:
-                labels_file = os.path.join(data_dir, f"pg_{file}_labels.txt")
+                labels_file = os.path.join(data_dir, f"{file}__labels.txt")
                 labels = np.loadtxt(labels_file).astype(int)
             
             

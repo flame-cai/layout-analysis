@@ -6,7 +6,8 @@ import random
 from architecture import ReadingOrderTransformer
 from data_loading import *
 
-
+MANUSCRIPT_NAME = 'clean'
+DATA_PATH = f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{MANUSCRIPT_NAME}/points-2D'
 
 def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm_params=None):
     """
@@ -157,11 +158,12 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Create datasets
-    all_files = [f.split('_')[1] for f in os.listdir('/home/kartik/layout-analysis/data/test-data') if f.endswith('points.txt')]
+    #all_files = [f.split('_')[1] for f in os.listdir(DATA_PATH) if f.endswith('.txt')]
+    all_files = [f.split('__')[0] for f in os.listdir(DATA_PATH) if f.endswith('__points.txt')]
     random.shuffle(all_files)
     
     test_files = all_files
-    test_dataset = PointDataset('/home/kartik/layout-analysis/data/test-data', test_files, labels_mode=False)
+    test_dataset = PointDataset(DATA_PATH, test_files, labels_mode=False)
     test_norm_params = test_dataset.get_normalization_params()
     
     # Create data loaders
@@ -172,7 +174,7 @@ def main():
     model = ReadingOrderTransformer()
     
     # Load best model and evaluate
-    model.load_state_dict(torch.load('/home/kartik/layout-analysis/models/best_model.pt'))
+    model.load_state_dict(torch.load('/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt'))
     evaluate_and_visualize(model, test_loader, device=device, norm_params=test_norm_params)
 
 if __name__ == "__main__":

@@ -196,7 +196,7 @@ class Page:
                     
         return np.array(points), np.array(labels)
 
-def generate_dataset(num_pages: int = 100, base_path: str = "/home/kartik/layout-analysis/data/synthetic-data/"):
+def generate_dataset(num_pages: int = 100, base_path: str = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data/"):
     """Generate multiple pages of synthetic data"""
     for page_idx in range(num_pages):
         # Create page with random layout
@@ -207,8 +207,8 @@ def generate_dataset(num_pages: int = 100, base_path: str = "/home/kartik/layout
         points, labels = page.get_points_and_labels()
         
         # Save to files
-        points_file = f"pg_{page_idx}_points.txt"
-        labels_file = f"pg_{page_idx}_labels.txt"
+        points_file = f"{page_idx}__points.txt"
+        labels_file = f"{page_idx}__labels.txt"
         
         np.savetxt(base_path + points_file, points, fmt='%d', delimiter=' ')
         np.savetxt(base_path + labels_file, labels, fmt='%d')
