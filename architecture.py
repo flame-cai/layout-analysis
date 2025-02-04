@@ -26,7 +26,7 @@ class ReadingOrderTransformer(nn.Module):
         
         # Input embedding
         self.input_embed = nn.Sequential(
-            nn.Linear(2, d_model),
+            nn.Linear(2, d_model),   # here instead of 2, it will be 6 or 8.
             nn.ReLU(),
             nn.Linear(d_model, d_model),
             nn.ReLU(),
