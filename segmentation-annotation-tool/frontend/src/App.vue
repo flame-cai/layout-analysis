@@ -38,6 +38,7 @@ export default {
       currentPage: 0,
       points: [],
       labels: [],
+      pointColors: [], // Track point colors
       isCtrlPressed: false,
       ctx: null,
       currentLabel: 0,
@@ -128,6 +129,7 @@ export default {
       this.points.forEach((point, index) => {
         this.ctx.beginPath()
         this.ctx.arc(point.x, point.y, 5, 0, Math.PI * 2)
+        point.currentColor = this.ctx.fillStyle
         
         if (this.labels[point.index] !== null) {
           if (this.labels[point.index] === FOOTNOTE_LABEL) {
@@ -166,6 +168,12 @@ export default {
 
         // Only add to current batch if label actually changed
         if (oldLabel !== newLabel) {
+          console.log('Annotating point:', {
+            pointIndex: point.index,
+            oldLabel,
+            newLabel,
+            oldColor: this.ctx.fillStyle
+          })
           this.labels[point.index] = newLabel
           
           // Add to current annotation batch
@@ -175,7 +183,9 @@ export default {
           this.currentAnnotationBatch.push({
             pointIndex: point.index,
             oldLabel,
-            newLabel
+            newLabel,
+            oldColor: this.pointColors[point.index] || 'gray' // Store previous color
+
           })
           
           this.drawPoints()
@@ -204,10 +214,17 @@ export default {
     },
     
     handleUndo() {
+      console.log('Undo triggered')
+      console.log('Undo history length:', this.undoHistory.length)
       if (this.undoHistory.length > 0) {
         const lastBatch = this.undoHistory.pop()
+        console.log('Last batch:', lastBatch)
         lastBatch.forEach(({ pointIndex, oldLabel }) => {
+          console.log(`Restoring point ${pointIndex}:`, 
+            `Old label: ${oldLabel}`, 
+            `Old color: ${oldColor}`)
           this.labels[pointIndex] = oldLabel
+          this.pointColors[pointIndex] = oldColor // Restore color
         })
         this.drawPoints()
       }

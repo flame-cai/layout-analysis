@@ -88,7 +88,7 @@ class TextBlock:
                 
             # Add some variance to line spacing
             y_position = self.y + i * line_height
-            y_position += random.randint(-line_height//10, line_height//10)
+            y_position += random.randint(-line_height//3, line_height//3)
             
             # Create line with slight random curve
             curve_factor = random.uniform(0, 3)
@@ -122,7 +122,7 @@ class Page:
                 raise ValueError("Text blocks overlap!")
         self.text_blocks.append(block)
         
-    def generate_random_layout(self, num_blocks: int = 2):
+    def generate_random_layout(self, num_blocks: int = 8):
         """Generate a random layout with the specified number of text blocks"""
         self.text_blocks = []
         
@@ -130,8 +130,8 @@ class Page:
         for _ in range(num_blocks):
             attempts = 0
             while attempts < 100:
-                width = random.randint(300, 1000)
-                height = random.randint(300, 430)
+                width = random.randint(80, 1000)
+                height = random.randint(80, 430)
                 x = random.randint(0, self.width - width)
                 y = random.randint(0, self.height - height)
                 
@@ -140,8 +140,8 @@ class Page:
                     y=y,
                     width=width,
                     height=height,
-                    lines_count=random.randint(5, 15),
-                    chars_per_line=random.randint(20, 35),
+                    lines_count=random.randint(1, 15),
+                    chars_per_line=random.randint(2, 35),
                     alignment=random.choice(['left', 'center', 'right'])
                 )
                 
@@ -201,7 +201,7 @@ def generate_dataset(num_pages: int = 100, base_path: str = "/mnt/cai-data/manus
     for page_idx in range(num_pages):
         # Create page with random layout
         page = Page()
-        page.generate_random_layout(num_blocks=random.randint(1, 3))
+        page.generate_random_layout(num_blocks=random.randint(1, 8))
         
         # Get points and labels 
         points, labels = page.get_points_and_labels()
@@ -213,4 +213,4 @@ def generate_dataset(num_pages: int = 100, base_path: str = "/mnt/cai-data/manus
         np.savetxt(base_path + points_file, points, fmt='%d', delimiter=' ')
         np.savetxt(base_path + labels_file, labels, fmt='%d')
 
-generate_dataset(10000)
+generate_dataset(100000)

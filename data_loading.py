@@ -27,6 +27,8 @@ class PointDataset(Dataset):
             for file in split_files:
                 points_file = os.path.join(data_dir, f"{file}__points.txt")
                 points = np.loadtxt(points_file)
+                if len(points.shape)!=2:
+                    continue
                 self.min_x = min(self.min_x, points[:, 0].min())
                 self.min_y = min(self.min_y, points[:, 1].min())
                 self.max_x = max(self.max_x, points[:, 0].max())
@@ -36,6 +38,8 @@ class PointDataset(Dataset):
         for file in split_files:
             points_file = os.path.join(data_dir, f"{file}__points.txt")
             points = np.loadtxt(points_file)
+            if len(points.shape)!=2:
+                    continue
             if self.labels_mode == True:
                 labels_file = os.path.join(data_dir, f"{file}__labels.txt")
                 labels = np.loadtxt(labels_file).astype(int)

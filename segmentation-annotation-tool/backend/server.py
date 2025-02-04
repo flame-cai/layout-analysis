@@ -7,7 +7,10 @@ app = Flask(__name__)
 CORS(app)
 
 # Configure the data directory relative to the server file
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'test-data')
+MANUSCRIPT_DIR = '/mnt/cai-data/manuscript-annotation-tool/manuscripts/man-seg'
+DATA_DIR = os.path.join(MANUSCRIPT_DIR, 'points-2D')
+#DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'test-data')
+
 
 @app.route('/api/points/<int:page>', methods=['GET'])
 def get_points(page):
