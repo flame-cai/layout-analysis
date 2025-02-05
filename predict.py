@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import random
 from architecture import ReadingOrderTransformer
-from data_loading import *
+from data_loading_no_angles import *
 
 MANUSCRIPT_NAME = 'clean'
 DATA_PATH = f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{MANUSCRIPT_NAME}/points-2D'

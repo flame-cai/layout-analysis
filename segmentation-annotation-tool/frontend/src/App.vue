@@ -94,8 +94,8 @@ export default {
       const minY = Math.min(...yCoords)
       const maxY = Math.max(...yCoords)
       
-      let width = maxX - minX + (this.margin * 2)
-      let height = maxY - minY + (this.margin * 2)
+      let width = maxX - minX + (this.margin * 15)
+      let height = maxY - minY + (this.margin * 15)
       
       const container = document.querySelector('.container')
       const maxWidth = container.clientWidth - 40

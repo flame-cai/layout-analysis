@@ -224,4 +224,4 @@ def generate_dataset(num_pages: int = 100, base_path: str = "/mnt/cai-data/manus
         np.savetxt(base_path + points_file, points, fmt='%d', delimiter=' ')
         np.savetxt(base_path + labels_file, labels, fmt='%d')
 
-generate_dataset(100000)
+generate_dataset(10000)
