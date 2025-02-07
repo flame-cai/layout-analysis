@@ -6,7 +6,7 @@ import numpy as np
 import random
 import os
 
-MAX_NO_POINTS = 1400
+MAX_NO_POINTS = 2300
 
 class PointDataset(Dataset):
     def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True, labels_mode = True):
@@ -21,25 +21,18 @@ class PointDataset(Dataset):
         self.min_y = float('inf')
         self.max_x = float('-inf')
         self.max_y = float('-inf')
-        
-        # First pass: find min/max coordinates if normalizing
-        if normalize:
-            for file in split_files:
-                points_file = os.path.join(data_dir, f"{file}__points.txt")
-                points = np.loadtxt(points_file)
-                if len(points.shape)!=2:
-                    continue
-                self.min_x = min(self.min_x, points[:, 0].min())
-                self.min_y = min(self.min_y, points[:, 1].min())
-                self.max_x = max(self.max_x, points[:, 0].max())
-                self.max_y = max(self.max_y, points[:, 1].max())
-        
+                
         # Second pass: load and process data
         for file in split_files:
             points_file = os.path.join(data_dir, f"{file}__points.txt")
             points = np.loadtxt(points_file)
             if len(points.shape)!=2:
                     continue
+            if normalize:
+                self.min_x = min(self.min_x, points[:, 0].min())
+                self.min_y = min(self.min_y, points[:, 1].min())
+                self.max_x = max(self.max_x, points[:, 0].max())
+                self.max_y = max(self.max_y, points[:, 1].max())
             if self.labels_mode == True:
                 labels_file = os.path.join(data_dir, f"{file}__labels.txt")
                 labels = np.loadtxt(labels_file).astype(int)
@@ -60,11 +53,11 @@ class PointDataset(Dataset):
                 points[:, 1] = 1 - (points[:, 1] - self.min_y) / (self.max_y - self.min_y)
             
             # Shuffle points and labels together
-            indices = list(range(len(points)))
-            random.shuffle(indices)
-            points = points[indices]
+            #indices = list(range(len(points)))
+            #random.shuffle(indices)
+            #points = points[indices]
             if self.labels_mode == True:
-                labels = labels[indices]
+                #labels = labels[indices]
                 self.examples.append((points, labels))
             else: # just order the points roughly
                 self.examples.append((points, np.array([i for i in range(len(points))])))

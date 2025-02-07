@@ -194,13 +194,13 @@ def main():
     test_norm_params = test_dataset.get_normalization_params()
     
     # Create data loaders
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32)
-    test_loader = DataLoader(test_dataset, batch_size=1)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=4, pin_memory=True)
     
     # Create and train model
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=4)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=10)
     
     # Load best model and evaluate 
     model.load_state_dict(torch.load('/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt'))

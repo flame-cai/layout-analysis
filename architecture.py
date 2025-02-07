@@ -5,20 +5,73 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import math
 
 
-NUM_CLASSES = 9
+NUM_CLASSES = 15
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len=NUM_CLASSES):
+# class PositionalEncoding(nn.Module):
+#     def __init__(self, d_model, max_len=NUM_CLASSES):
+#         super().__init__()
+#         position = torch.arange(max_len).unsqueeze(1)
+#         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+#         pe = torch.zeros(max_len, 1, d_model)
+#         pe[:, 0, 0::2] = torch.sin(position * div_term)
+#         pe[:, 0, 1::2] = torch.cos(position * div_term)
+#         self.register_buffer('pe', pe)
+
+#     def forward(self, x):
+#         return x + self.pe[:x.size(0)]
+    
+class RoPEEncoding(nn.Module):
+    def __init__(self, d_model):
         super().__init__()
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
+        if d_model % 2 != 0:
+            raise ValueError("d_model must be even for RoPE encoding")
+        self.d_model = d_model
+        
+        # Pre-compute division terms for efficiency
+        self.div_term = torch.exp(
+            torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
+        )
 
-    def forward(self, x):
-        return x #+ self.pe[:x.size(0)]
+    def forward(self, x, seq_dim=0):
+        """
+        Args:
+            x: Input tensor of shape (seq_len, batch_size, d_model) or (batch_size, seq_len, d_model)
+            seq_dim: Dimension containing sequence length (0 for seq-first, 1 for batch-first)
+        Returns:
+            Tensor with rotary position encodings applied
+        """
+        # Convert to seq-first if needed
+        if seq_dim == 1:
+            x = x.transpose(0, 1)
+        
+        seq_len = x.shape[0]
+        device = x.device
+        
+        # Move div_term to the correct device
+        div_term = self.div_term.to(device)
+        
+        # Compute position angles
+        position = torch.arange(seq_len, device=device).unsqueeze(1)
+        angles = position * div_term  # (seq_len, d_model/2)
+        
+        # Compute sin and cos values
+        sin = torch.sin(angles).unsqueeze(1)  # (seq_len, 1, d_model/2)
+        cos = torch.cos(angles).unsqueeze(1)  # (seq_len, 1, d_model/2)
+        
+        # Split embedding into even and odd dimensions
+        x_even = x[..., ::2]  # (seq_len, batch_size, d_model/2)
+        x_odd = x[..., 1::2]  # (seq_len, batch_size, d_model/2)
+        
+        # Apply rotation
+        rotated_x = torch.empty_like(x)
+        rotated_x[..., ::2] = x_even * cos - x_odd * sin
+        rotated_x[..., 1::2] = x_odd * cos + x_even * sin
+        
+        # Restore original format if needed
+        if seq_dim == 1:
+            rotated_x = rotated_x.transpose(0, 1)
+            
+        return rotated_x
 
 class ReadingOrderTransformer(nn.Module):
     def __init__(self, d_model=72, nhead=6, num_encoder_layers=6, num_classes=NUM_CLASSES+2):  # NUM_CLASSES + start/end tokens
@@ -33,7 +86,7 @@ class ReadingOrderTransformer(nn.Module):
         )
         
         # Positional encoding
-        self.pos_encoder = PositionalEncoding(d_model)
+        self.pos_encoder = RoPEEncoding(d_model)
         
         # Transformer encoder
         encoder_layers = TransformerEncoderLayer(d_model, nhead, dim_feedforward=d_model)
@@ -50,7 +103,8 @@ class ReadingOrderTransformer(nn.Module):
         src = src.transpose(0, 1)  # [seq_len, batch_size, d_model]
         
         # Add positional encoding
-        # src = self.pos_encoder(src)
+        src = self.pos_encoder(src, seq_dim=0)
+
         
         # Transform
         output = self.transformer_encoder(src)

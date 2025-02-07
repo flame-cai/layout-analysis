@@ -85,7 +85,6 @@ class TextBlock:
             chars_count = self.base_chars_per_line
 
             if chars_count>2 and self.allow_half_lines and random.random() < 0.3:
-                print('in the goddamn IF')
                 chars_count = math.ceil(chars_count / 2)
                 
             # Add some variance to line spacing
@@ -94,7 +93,6 @@ class TextBlock:
             
             # Create line with slight random curve
             curve_factor = random.uniform(0, 3)
-            print(f'initializing line with character count: {chars_count}')
             line = Line(
                 start_x=self.x,
                 start_y=y_position,
@@ -189,11 +187,9 @@ class Page:
         labels = []
         
         for block_idx, block in enumerate(self.text_blocks):
-            print(f"block no: {block_idx}")
-            label = block_idx
+            #label = block_idx
             for line_idx, line in enumerate(block.lines):
-                print(f"line no: {line_idx}")
-                #label = block_idx * 15 + line_idx
+                label = line_idx
                 for point in line.points:
                     points.append([point.x, point.y])
                     labels.append(label)
@@ -211,10 +207,8 @@ def generate_dataset(num_pages: int = 100, base_path: str = "/mnt/cai-data/manus
         # Get points and labels 
         points, labels = page.get_points_and_labels()
         if len(points.shape)!=2:
-            print('in generate dataset..')
             print(points.shape)
             print(points)
-            print('stopping...')
             break
         
         # Save to files
@@ -224,4 +218,4 @@ def generate_dataset(num_pages: int = 100, base_path: str = "/mnt/cai-data/manus
         np.savetxt(base_path + points_file, points, fmt='%d', delimiter=' ')
         np.savetxt(base_path + labels_file, labels, fmt='%d')
 
-generate_dataset(10000)
+generate_dataset(100000)
