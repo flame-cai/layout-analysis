@@ -39,6 +39,12 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
         # Move data to appropriate device
         points = points.to(device)
         points_first = points[0]  # Get first example since batch_size=1
+
+        # Sort by the second column (y-coordinates)
+        sorted_tensor, indices = torch.sort(points_first, dim=0)
+        # Get the sorted tensor based on the y-coordinates
+        points_first = points_first[indices[:, 1]]
+
         _first = _[0]
         
         # Get model predictions

@@ -6,7 +6,7 @@ import numpy as np
 import random
 import os
 
-MAX_NO_POINTS = 2300
+MAX_NO_POINTS = 1800
 
 class PointDataset(Dataset):
     def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True, labels_mode = True):
