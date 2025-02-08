@@ -3,8 +3,8 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import os
 import random
-from architecture import ReadingOrderTransformer
-from data_loading_no_angles import *
+from no_angle_architecture import ReadingOrderTransformer
+from no_angle_data_loading import *
 
 MANUSCRIPT_NAME = 'clean'
 DATA_PATH = f'/mnt/cai-data/manuscript-annotation-tool/manuscripts/{MANUSCRIPT_NAME}/points-2D'

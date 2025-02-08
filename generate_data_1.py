@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional
 from concurrent.futures import ProcessPoolExecutor
 
+MAX_CLASSES = 15
+MAX_BLOCKS = 3
 
 @dataclass
 class Point:
@@ -87,7 +89,7 @@ class TextBlock:
         
     def generate_lines(self) -> List[Line]:
         """Generate lines for the text block"""
-        line_height = self.height // self.lines_count
+        line_height = np.random.randint(8,25) #self.height // self.lines_count
         
         for i in range(self.lines_count):
             # Possibly reduce the number of characters in some lines
@@ -135,8 +137,8 @@ class Page:
         for _ in range(num_blocks):
             attempts = 0
             while attempts < 100:
-                block_width = random.randint(300, 1000)
-                block_height = random.randint(300, 430)
+                block_width = random.randint(300, 1200)
+                block_height = random.randint(300, 450)
                 x = random.randint(0, self.width - block_width)
                 y = random.randint(0, self.height - block_height)
                 
@@ -145,7 +147,7 @@ class Page:
                     y=y,
                     width=block_width,
                     height=block_height,
-                    lines_count=random.randint(4, 15),
+                    lines_count=random.randint(4, MAX_CLASSES),
                     chars_per_line=random.randint(15, 35),
                     alignment=random.choice(['left', 'center', 'right'])
                 )
@@ -188,11 +190,17 @@ class Page:
         points = []
         labels = []
         
-        for block in self.text_blocks:
+        for block_idx,block in enumerate(self.text_blocks):
             for line_idx, line in enumerate(block.lines):
-                for point in line.points:
+                for point_idx,point in enumerate(line.points):
+                    if point_idx == 0:
+                        label = MAX_CLASSES
+                    elif point_idx == len(line.points) - 1:
+                        label = MAX_CLASSES+1
+                    else:
+                        label = line_idx   
                     points.append([point.x, point.y])
-                    labels.append(line_idx)
+                    labels.append(label)
                     
         # Convert to NumPy arrays and sort by y-coordinate
         points = np.array(points)
@@ -210,7 +218,7 @@ def process_page(page_idx: int, base_path: str) -> None:
     """
     page = Page()
     # Random number of text blocks per page between 1 and 8
-    page.generate_random_layout(num_blocks=random.randint(1, 3))
+    page.generate_random_layout(num_blocks=random.randint(1, MAX_BLOCKS))
     points, labels = page.get_points_and_labels()
     
     # Use os.path.join for file paths
@@ -254,5 +262,5 @@ def visualize_sample_page():
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
     # visualize_sample_page()
-    generate_dataset_parallel(100000)
+    generate_dataset_parallel(200000)
     

@@ -1,9 +1,7 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import numpy as np
-import random
+from scipy.spatial import cKDTree
 import os
 
 MAX_NO_POINTS = 1800
@@ -61,6 +59,7 @@ class PointDataset(Dataset):
                 self.examples.append((points, labels))
             else: # just order the points roughly
                 self.examples.append((points, np.array([i for i in range(len(points))])))
+
 
     def __len__(self):
         return len(self.examples)
