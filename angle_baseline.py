@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from angle_architecture import ReadingOrderTransformer
 from angle_data_loading import *
+import torch.nn.functional as F
 
 #DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
 DATA_PATH = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data"
@@ -56,8 +57,14 @@ def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
             
             # Use mixed precision autocast if available
             with torch.cuda.amp.autocast(enabled=(scaler is not None)):
-                output = model(points)
-                loss = criterion(output.view(-1, output.size(-1)), labels.view(-1))
+                logits = model(points)
+
+                # Compute the standard cross-entropy loss
+                loss_ce = criterion(logits.view(-1, logits.size(-1)), labels.view(-1))
+                loss = loss_ce 
+
+                #output = model(points)
+                #loss = criterion(output.view(-1, output.size(-1)), labels.view(-1))
             
             if scaler is not None:
                 scaler.scale(loss).backward()
@@ -80,11 +87,21 @@ def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
         # Validation loop
         model.eval()
         val_loss = 0
+        # with torch.no_grad():
+        #     for points, labels in val_loader:
+        #         points, labels = points.to(device), labels.to(device)
+        #         output = model(points)
+        #         val_loss += criterion(output.view(-1, output.size(-1)), labels.view(-1)).item()
         with torch.no_grad():
             for points, labels in val_loader:
                 points, labels = points.to(device), labels.to(device)
                 output = model(points)
-                val_loss += criterion(output.view(-1, output.size(-1)), labels.view(-1)).item()
+                
+                # Primary loss
+                loss_ce = criterion(output.view(-1, output.size(-1)), labels.view(-1))
+                # Total validation loss (if you want to track it combined)
+                total_loss = loss_ce
+                val_loss += total_loss.item()
         
         print(f'Epoch {epoch}: Train Loss = {train_loss/len(train_loader):.4f}, '
               f'Val Loss = {val_loss/len(val_loader):.4f}')

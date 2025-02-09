@@ -3,10 +3,11 @@ import torch.nn as nn
 
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from generate_data_1 import MAX_CLASSES
+from angle_data_loading import MAX_NO_POINTS
 
-
+#NUM_CLASSES = MAX_NO_POINTS
 NUM_CLASSES = MAX_CLASSES # MAX_BLOCKS
-TOTAL_CLASSES = NUM_CLASSES + 2 # line start, line end
+TOTAL_CLASSES = NUM_CLASSES  + 2 # line start, line end
 
 # class PositionalEncoding(nn.Module):
 #     def __init__(self, d_model, max_len=NUM_CLASSES):
@@ -80,7 +81,7 @@ class ReadingOrderTransformer(nn.Module):
         
         # Input embedding
         self.input_embed = nn.Sequential(
-            nn.Linear(10, d_model),   # here instead of 2, it will be 6 or 8.
+            nn.Linear(13, d_model),   # here instead of 2, it will be 6 or 8.
             nn.ReLU(),
             nn.Linear(d_model, d_model),
             nn.ReLU(),
@@ -102,7 +103,7 @@ class ReadingOrderTransformer(nn.Module):
         
         # Embed input
         src = self.input_embed(src)  # [batch_size, seq_len, d_model]
-        src = self.embed_norm(src)    # Normalize the embedded features
+        #src = self.embed_norm(src)    # Normalize the embedded features
         src = src.transpose(0, 1)  # [seq_len, batch_size, d_model]
         
         # Add positional encoding

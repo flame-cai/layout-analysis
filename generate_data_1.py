@@ -198,7 +198,8 @@ class Page:
                     elif point_idx == len(line.points) - 1:
                         label = MAX_CLASSES+1
                     else:
-                        label = line_idx   
+                        label = line_idx
+            
                     points.append([point.x, point.y])
                     labels.append(label)
                     
@@ -262,5 +263,5 @@ def visualize_sample_page():
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
     # visualize_sample_page()
-    generate_dataset_parallel(200000)
+    generate_dataset_parallel(300000)
     
