@@ -95,13 +95,19 @@ class PointDataset(Dataset):
         i_idx = np.arange(n_points)[:, None]
         selected_diffs = diffs[i_idx, neighbor_pos, :]  # shape: (n_points, k, 2)
 
-        # # Flatten the selected differences (k neighbors × 2 coordinates = 8 features)
-        # offsets_flat = selected_diffs.reshape(n_points, -1)  # shape: (n_points, 8)
-        # features[:, 2:] = offsets_flat
+       # Filter: Only add those differences that are approximately horizontal.
+        # Define "approximately horizontal" as |dy| < threshold_ratio * |dx|.
+        threshold_ratio = 0.3
+        horizontal_mask = np.abs(selected_diffs[..., 1]) < threshold_ratio * np.abs(selected_diffs[..., 0])
+        # Expand mask dimensions for proper broadcasting.
+        horizontal_mask = horizontal_mask[..., None]  # shape: (n_points, k, 1)
+        # Zero-out those differences that do not pass the horizontal filter.
+        filtered_diffs = selected_diffs * horizontal_mask  # shape: (n_points, k, 2)
 
-        summed_diffs = np.sum(selected_diffs, axis=1)  # shape: (n_points, 2)
+        # Sum the filtered differences over the k neighbors to produce a single 2D offset.
+        summed_diffs = np.sum(filtered_diffs, axis=1)  # shape: (n_points, 2)
 
-        # Concatenate the original coordinates with the summed offsets.
+        # Place the summed offsets in columns 2-3.
         features[:, 2:] = summed_diffs
 
         return features

@@ -8,7 +8,16 @@ from typing import List, Tuple, Optional
 from concurrent.futures import ProcessPoolExecutor
 
 MAX_CLASSES = 15
-MAX_BLOCKS = 3
+MAX_BLOCKS = 2
+
+LINE_SHORT_PROBABILITY= 0.3
+CHARACTER_SPACING_VARIANCE = 0.1
+
+CHAR_Y_VARIANCE = 1 #Character level
+LINE_Y_VAR = 1 #Line level - greater means less variance
+curve_modes = ['monotonic_up', 'monotonic_down', 'arch_up', 'arch_down','no_arch']
+
+MAX_CURVE = 20
 
 @dataclass
 class Point:
@@ -16,66 +25,107 @@ class Point:
     y: int
 
 class Line:
-    def __init__(self, start_x: int, start_y: int, width: int, chars_count: int, 
-                 alignment: str = 'left', curve_factor: float = 0.0):
+    def __init__(self, start_x: int, start_y: int, width: int, chars_count: int, curve_mode: str, curve_scale: float = 0.0,
+                 alignment: str = 'left'):
         self.start_x = start_x
         self.start_y = start_y
         self.width = width
         self.chars_count = chars_count
         self.alignment = alignment
-        self.curve_factor = curve_factor
         self.points: List[Point] = []
         self.base_spacing = self.width // (self.chars_count - 1)
+        self.curve_scale = curve_scale
+        self.curve_mode = curve_mode
         
     def generate_points(self) -> List[Point]:
-        """Generate character points along the line with possible curve using vectorized operations"""
-        if random.random() < 0.3:
-            self.chars_count = int(self.chars_count*random.random())
-        if self.chars_count <= 1:
-            self.points = [Point(self.start_x, self.start_y)]
-            return self.points
+        """Generate character points along the line with a curve.
 
-        # Determine a base spacing between characters
-        #base_spacing = self.width // (self.chars_count - 1)
-        
-        # Generate randomized spacings with a minimum of 1 using NumPy
-        spacings = np.maximum(1, (self.base_spacing + np.random.normal(0, self.base_spacing * 0.1, self.chars_count - 1)).astype(int))
-        
-        # Adjust the spacings so that the total matches the target width
-        # total_spacing = spacings.sum()
-        # scaling_factor = self.width / total_spacing
-        # spacings = (spacings * scaling_factor).astype(int)
-        
-        # Compute cumulative x-offsets and positions
+        The full curve is generated using the original character count.
+        First, the full line is aligned (left, center, or right) using its full width.
+        Then, if the line is to be cut short, a subset of the aligned points is selected
+        based on the desired alignment:
+        - Left alignment: keep the first N points.
+        - Right alignment: keep the last N points.
+        - Center alignment: keep N points centered in the full line.
+        """
+        # Save the original full character count.
+        full_chars_count = self.chars_count
+
+        # Generate randomized spacings for the full line.
+        spacings = np.maximum(
+            1,
+            (self.base_spacing +
+            np.random.normal(0, self.base_spacing * CHARACTER_SPACING_VARIANCE, full_chars_count - 1)
+            ).astype(int)
+        )
+        # Compute cumulative x-offsets and positions.
         x_offsets = np.concatenate(([0], np.cumsum(spacings)))
         x_positions = self.start_x + x_offsets
-        
-        # Compute y offsets using a sine function (vectorized)
-        i_values = np.arange(self.chars_count)
-        angles = (i_values / self.chars_count) * math.pi
-        y_offsets = (np.sin(angles) * self.curve_factor).astype(int)
-        y_positions = self.start_y + y_offsets 
-        
-        # Create the list of points
-        
-        points = [Point(int(x), int(y+random.uniform(-1.5, 1.5))) for x, y in zip(x_positions, y_positions)]
-        
-        # Apply alignment adjustments
+
+        # Set the start and end angles based on the desired curve mode.
+        if self.curve_mode == 'monotonic_up':
+            start_angle, end_angle = -math.pi / 6, math.pi / 6
+        elif self.curve_mode == 'monotonic_down':
+            start_angle, end_angle = math.pi / 6, -math.pi / 6
+        elif self.curve_mode == 'arch_up':
+            start_angle, end_angle = 0, math.pi
+        elif self.curve_mode == 'arch_down':
+            start_angle, end_angle = -math.pi, 0
+        else:
+            start_angle, end_angle = -math.pi / 6, math.pi / 6
+
+        # Generate angles for the full line.
+        angles = np.linspace(start_angle, end_angle, full_chars_count)
+
+        # Compute y offsets from the sine of these angles.
+        y_offsets = np.sin(angles) * self.curve_scale
+        y_positions = self.start_y + y_offsets
+
+        # Combine x and y positions into full_points.
+        full_points = [
+            Point(x, int(y + random.randint(-CHAR_Y_VARIANCE, CHAR_Y_VARIANCE)))
+            for x, y in zip(x_positions, y_positions)
+        ]
+
+        # Compute the full line width.
+        full_line_width = full_points[-1].x - full_points[0].x
+
+        # --- Apply alignment offset to the full line ---
+        # (This uses the full line's width so that the curve shape is consistent.)
+        aligned_points = full_points[:]  # copy the full list
         if self.alignment == 'center':
-            offset = (self.width - (points[-1].x - points[0].x)) // 2
-            for p in points:
+            offset = (self.width - full_line_width) // 2
+            for p in aligned_points:
                 p.x += offset
         elif self.alignment == 'right':
-            offset = self.width - (points[-1].x - points[0].x)
-            for p in points:
+            offset = self.width - full_line_width
+            for p in aligned_points:
                 p.x += offset
+        # For left alignment, no offset is needed.
+
+        # --- Now possibly truncate the line ---
+        if random.random() < LINE_SHORT_PROBABILITY:
+            # Determine a new count based on the original full_chars_count (with a minimum number).
+            new_count = int(2 + full_chars_count * random.random())
+            if self.alignment == 'right':
+                # For right alignment, keep the last new_count points.
+                points = aligned_points[-new_count:]
+            elif self.alignment == 'center':
+                # For center alignment, select new_count points from the middle.
+                start_index = (full_chars_count - new_count) // 2
+                points = aligned_points[start_index:start_index + new_count]
+            else:
+                # For left alignment (or default), keep the first new_count points.
+                points = aligned_points[:new_count]
+        else:
+            points = aligned_points
 
         self.points = points
         return points
 
 class TextBlock:
     def __init__(self, x: int, y: int, width: int, height: int, 
-                 lines_count: int, chars_per_line: int,
+                 lines_count: int, chars_per_line: int, curve_mode: str, curve_scale: str,
                  alignment: str = 'left', allow_half_lines: bool = True):
         self.x = x
         self.y = y
@@ -85,28 +135,30 @@ class TextBlock:
         self.base_chars_per_line = chars_per_line
         self.alignment = alignment
         self.allow_half_lines = allow_half_lines
+        self.curve_mode = curve_mode
+        self.curve_scale = curve_scale
+        # Apply a slight random curve to the line
         self.lines: List[Line] = []
+
+    
         
     def generate_lines(self) -> List[Line]:
         """Generate lines for the text block"""
         line_height = np.random.randint(8,25) #self.height // self.lines_count
-        
-        for i in range(self.lines_count):
-            # Possibly reduce the number of characters in some lines
-                
+
+        for i in range(self.lines_count):                
             # Vary the y-position for each line slightly
             y_position = self.y + i * line_height
-            y_position += random.randint(-line_height // 3, line_height // 3)
-            
-            # Apply a slight random curve to the line
-            curve_factor = random.uniform(0, 3)
+            y_position += random.randint(-LINE_Y_VAR, LINE_Y_VAR)
+   
             line = Line(
                 start_x=self.x,
                 start_y=y_position,
                 width=self.width,
                 chars_count=self.base_chars_per_line,
                 alignment=self.alignment,
-                curve_factor=curve_factor
+                curve_mode=self.curve_mode,
+                curve_scale=self.curve_scale
             )
             line.generate_points()
             self.lines.append(line)
@@ -149,9 +201,11 @@ class Page:
                     height=block_height,
                     lines_count=random.randint(4, MAX_CLASSES),
                     chars_per_line=random.randint(15, 35),
-                    alignment=random.choice(['left', 'center', 'right'])
+                    alignment=random.choice(['left','center','right']),
+                    curve_mode=random.choice(curve_modes),
+                    curve_scale=random.randint(0,MAX_CURVE)
                 )
-                
+        
                 try:
                     self.add_text_block(block)
                     block.generate_lines()
@@ -177,7 +231,9 @@ class Page:
                 height=margin_height,
                 lines_count=random.randint(1, 4),
                 chars_per_line=random.randint(2, 5),
-                alignment='left'
+                alignment='left',
+                curve_mode='no curve',
+                curve_scale=0
             )
             try:
                 self.add_text_block(marginalia)
@@ -193,12 +249,12 @@ class Page:
         for block_idx,block in enumerate(self.text_blocks):
             for line_idx, line in enumerate(block.lines):
                 for point_idx,point in enumerate(line.points):
-                    if point_idx == 0:
-                        label = MAX_CLASSES
-                    elif point_idx == len(line.points) - 1:
-                        label = MAX_CLASSES+1
-                    else:
-                        label = line_idx
+                    # if point_idx == 0:
+                    #     label = MAX_CLASSES
+                    # elif point_idx == len(line.points) - 1:
+                    #     label = MAX_CLASSES+1
+                    # else:
+                    label = line_idx
             
                     points.append([point.x, point.y])
                     labels.append(label)
@@ -262,6 +318,6 @@ def visualize_sample_page():
 
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
-    # visualize_sample_page()
-    generate_dataset_parallel(300000)
+    visualize_sample_page()
+    #generate_dataset_parallel(100000)
     

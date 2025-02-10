@@ -7,7 +7,7 @@ from angle_data_loading import MAX_NO_POINTS
 
 #NUM_CLASSES = MAX_NO_POINTS
 NUM_CLASSES = MAX_CLASSES # MAX_BLOCKS
-TOTAL_CLASSES = NUM_CLASSES  + 2 # line start, line end
+TOTAL_CLASSES = NUM_CLASSES # + 2 # line start, line end
 
 # class PositionalEncoding(nn.Module):
 #     def __init__(self, d_model, max_len=NUM_CLASSES):
