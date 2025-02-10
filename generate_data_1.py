@@ -7,17 +7,17 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional
 from concurrent.futures import ProcessPoolExecutor
 
-MAX_CLASSES = 15
+MAX_CLASSES = 15  # a text block can have max 15 lines
 MAX_BLOCKS = 2
 
 LINE_SHORT_PROBABILITY= 0.3
 CHARACTER_SPACING_VARIANCE = 0.1
 
-CHAR_Y_VARIANCE = 1 #Character level
-LINE_Y_VAR = 1 #Line level - greater means less variance
-curve_modes = ['monotonic_up', 'monotonic_down', 'arch_up', 'arch_down','no_arch']
+CHAR_Y_VARIANCE = 0.1 #Character level
+LINE_Y_VAR = 5 #Line level - greater means less variance
 
-MAX_CURVE = 20
+curve_modes = ['monotonic_up', 'monotonic_down', 'arch_up', 'arch_down','no_arch']
+MAX_CURVE = 15
 
 @dataclass
 class Point:
@@ -38,31 +38,27 @@ class Line:
         self.curve_mode = curve_mode
         
     def generate_points(self) -> List[Point]:
-        """Generate character points along the line with a curve.
+        """Generate character points along the line with a curve, optimized for speed.
 
-        The full curve is generated using the original character count.
-        First, the full line is aligned (left, center, or right) using its full width.
-        Then, if the line is to be cut short, a subset of the aligned points is selected
-        based on the desired alignment:
-        - Left alignment: keep the first N points.
-        - Right alignment: keep the last N points.
-        - Center alignment: keep N points centered in the full line.
+        The full curve is generated using the original char_count, then aligned,
+        and finally truncated (by slicing) depending on the alignment (left, center, right).
         """
         # Save the original full character count.
         full_chars_count = self.chars_count
 
-        # Generate randomized spacings for the full line.
+        # --- Generate x positions ---
+        # Create randomized spacings (vectorized) and compute cumulative x offsets.
         spacings = np.maximum(
             1,
             (self.base_spacing +
             np.random.normal(0, self.base_spacing * CHARACTER_SPACING_VARIANCE, full_chars_count - 1)
             ).astype(int)
         )
-        # Compute cumulative x-offsets and positions.
         x_offsets = np.concatenate(([0], np.cumsum(spacings)))
         x_positions = self.start_x + x_offsets
 
-        # Set the start and end angles based on the desired curve mode.
+        # --- Compute the sine-based y positions ---
+        # Determine the start and end angles based on the desired curve mode.
         if self.curve_mode == 'monotonic_up':
             start_angle, end_angle = -math.pi / 6, math.pi / 6
         elif self.curve_mode == 'monotonic_down':
@@ -74,55 +70,50 @@ class Line:
         else:
             start_angle, end_angle = -math.pi / 6, math.pi / 6
 
-        # Generate angles for the full line.
+        # Generate angles for the full line (vectorized).
         angles = np.linspace(start_angle, end_angle, full_chars_count)
-
-        # Compute y offsets from the sine of these angles.
+        # Compute y offsets using the sine function.
         y_offsets = np.sin(angles) * self.curve_scale
         y_positions = self.start_y + y_offsets
 
-        # Combine x and y positions into full_points.
-        full_points = [
-            Point(x, int(y + random.randint(-CHAR_Y_VARIANCE, CHAR_Y_VARIANCE)))
-            for x, y in zip(x_positions, y_positions)
-        ]
+        # --- Add vertical randomness in a vectorized manner ---
+        # Note: np.random.randint's high is exclusive, so add 1 to include CHAR_Y_VARIANCE.
+        noise = np.random.randint(-CHAR_Y_VARIANCE, CHAR_Y_VARIANCE + 1, size=full_chars_count)
+        y_positions = y_positions + noise
 
-        # Compute the full line width.
-        full_line_width = full_points[-1].x - full_points[0].x
-
-        # --- Apply alignment offset to the full line ---
-        # (This uses the full line's width so that the curve shape is consistent.)
-        aligned_points = full_points[:]  # copy the full list
+        # --- Compute alignment offset using the full line width ---
+        full_line_width = x_positions[-1] - x_positions[0]
         if self.alignment == 'center':
             offset = (self.width - full_line_width) // 2
-            for p in aligned_points:
-                p.x += offset
         elif self.alignment == 'right':
             offset = self.width - full_line_width
-            for p in aligned_points:
-                p.x += offset
-        # For left alignment, no offset is needed.
-
-        # --- Now possibly truncate the line ---
-        if random.random() < LINE_SHORT_PROBABILITY:
-            # Determine a new count based on the original full_chars_count (with a minimum number).
-            new_count = int(2 + full_chars_count * random.random())
-            if self.alignment == 'right':
-                # For right alignment, keep the last new_count points.
-                points = aligned_points[-new_count:]
-            elif self.alignment == 'center':
-                # For center alignment, select new_count points from the middle.
-                start_index = (full_chars_count - new_count) // 2
-                points = aligned_points[start_index:start_index + new_count]
-            else:
-                # For left alignment (or default), keep the first new_count points.
-                points = aligned_points[:new_count]
         else:
-            points = aligned_points
+            offset = 0
 
+        # Apply the offset to the entire x_positions array.
+        x_positions = x_positions + offset
+
+        # --- Possibly truncate the line ---
+        # Use slicing on the NumPy arrays based on the alignment.
+        if random.random() < LINE_SHORT_PROBABILITY:
+            new_count = int(2 + full_chars_count * random.random())  # enforce a minimum number of points
+            if self.alignment == 'right':
+                # Keep the last new_count points.
+                x_positions = x_positions[-new_count:]
+                y_positions = y_positions[-new_count:]
+            elif self.alignment == 'center':
+                start_index = (full_chars_count - new_count) // 2
+                x_positions = x_positions[start_index:start_index + new_count]
+                y_positions = y_positions[start_index:start_index + new_count]
+            else:  # left alignment (default)
+                x_positions = x_positions[:new_count]
+                y_positions = y_positions[:new_count]
+
+        # --- Convert the NumPy arrays into a list of Point objects ---
+        points = [Point(int(x), int(y)) for x, y in zip(x_positions, y_positions)]
         self.points = points
         return points
-
+    
 class TextBlock:
     def __init__(self, x: int, y: int, width: int, height: int, 
                  lines_count: int, chars_per_line: int, curve_mode: str, curve_scale: str,
@@ -318,6 +309,6 @@ def visualize_sample_page():
 
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
-    visualize_sample_page()
-    #generate_dataset_parallel(100000)
+    #visualize_sample_page()
+    generate_dataset_parallel(300000)
     

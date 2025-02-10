@@ -130,7 +130,7 @@ class PointDataset(Dataset):
         except Exception as e:
             # If Delaunay triangulation fails, simply return zeros.
             degrees = np.zeros(n_points, dtype=np.float32)
-        return degrees.reshape(n_points, 1)
+        return degrees.reshape(n_points, 1)/10
 
     def _add_anchor_features(self, points: np.ndarray) -> np.ndarray:
         """
