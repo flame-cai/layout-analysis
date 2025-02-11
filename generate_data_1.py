@@ -313,5 +313,5 @@ def visualize_sample_page():
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
     #visualize_sample_page()
-    generate_dataset_parallel(1000)
+    generate_dataset_parallel(1000000)
     
