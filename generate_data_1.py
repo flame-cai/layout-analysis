@@ -13,8 +13,8 @@ MAX_BLOCKS = 2
 LINE_SHORT_PROBABILITY= 0.3
 CHARACTER_SPACING_VARIANCE = 0.1
 
-CHAR_Y_VARIANCE = 0.1 #Character level
-LINE_Y_VAR = 5 #Line level - greater means less variance
+CHAR_Y_VARIANCE = 0.5 #Character level
+LINE_Y_VAR = 0.15 #Line level - greater means less variance
 
 curve_modes = ['monotonic_up', 'monotonic_down', 'arch_up', 'arch_down','no_arch']
 MAX_CURVE = 15
@@ -78,7 +78,7 @@ class Line:
 
         # --- Add vertical randomness in a vectorized manner ---
         # Note: np.random.randint's high is exclusive, so add 1 to include CHAR_Y_VARIANCE.
-        noise = np.random.randint(-CHAR_Y_VARIANCE, CHAR_Y_VARIANCE + 1, size=full_chars_count)
+        noise = np.random.uniform(-CHAR_Y_VARIANCE, CHAR_Y_VARIANCE, size=full_chars_count)
         y_positions = y_positions + noise
 
         # --- Compute alignment offset using the full line width ---
@@ -140,7 +140,7 @@ class TextBlock:
         for i in range(self.lines_count):                
             # Vary the y-position for each line slightly
             y_position = self.y + i * line_height
-            y_position += random.randint(-LINE_Y_VAR, LINE_Y_VAR)
+            y_position += line_height*np.random.uniform(-LINE_Y_VAR, LINE_Y_VAR)
    
             line = Line(
                 start_x=self.x,
@@ -239,13 +239,16 @@ class Page:
         
         for block_idx,block in enumerate(self.text_blocks):
             for line_idx, line in enumerate(block.lines):
+                len_line = len(line.points)
                 for point_idx,point in enumerate(line.points):
-                    # if point_idx == 0:
-                    #     label = MAX_CLASSES
-                    # elif point_idx == len(line.points) - 1:
-                    #     label = MAX_CLASSES+1
-                    # else:
-                    label = line_idx
+                    if point_idx == 0: #left 
+                        label = line_idx + 100 
+                    elif point_idx == len_line - 1: #right
+                        label = line_idx+101
+                    elif point_idx == int((len_line - 1)/2): #center
+                        label = line_idx+102
+                    else:
+                        label = line_idx
             
                     points.append([point.x, point.y])
                     labels.append(label)
@@ -309,6 +312,6 @@ def visualize_sample_page():
 
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
-    #visualize_sample_page()
-    generate_dataset_parallel(300000)
+    visualize_sample_page()
+    #generate_dataset_parallel(300000)
     

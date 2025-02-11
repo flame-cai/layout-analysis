@@ -10,6 +10,8 @@ from angle_architecture import ReadingOrderTransformer
 from angle_data_loading import *
 import torch.nn.functional as F
 
+random.seed(10)
+
 #DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
 DATA_PATH = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data"
 
@@ -234,7 +236,7 @@ def main():
     
     # Create and train model (keeping architecture unchanged)
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=20)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=30)
     
     # Load the best saved model and evaluate
     model.load_state_dict(torch.load('/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt'))

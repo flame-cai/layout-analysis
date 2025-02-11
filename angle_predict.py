@@ -56,9 +56,11 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
         with torch.no_grad():
             output = model(points_first.unsqueeze(0))
             probabilities = torch.softmax(output[0], dim=-1)  # Convert logits to probabilities
-            topk_probs, topk_indices = probabilities.topk(k=3, dim=-1)  # Get top 3 predictions
+            topk_probs, topk_indices = probabilities.topk(k=5, dim=-1)  # Get top 3 predictions
             # Example: Choose the one with the highest probability among top-k
+            print(topk_indices[500:530,:])
             pred_labels = topk_indices[:, 0].cpu()
+            print(pred_labels[500:530])
 
         # with torch.no_grad():
         #     output = model(points_first.unsqueeze(0))
