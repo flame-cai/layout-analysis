@@ -14,10 +14,10 @@ LINE_SHORT_PROBABILITY= 0.3
 CHARACTER_SPACING_VARIANCE = 0.1
 
 CHAR_Y_VARIANCE = 0.5 #Character level
-LINE_Y_VAR = 0.15 #Line level - greater means less variance
+LINE_Y_VAR = 0.15 #Line level 
 
 curve_modes = ['monotonic_up', 'monotonic_down', 'arch_up', 'arch_down','no_arch']
-MAX_CURVE = 15
+MAX_CURVE = 13
 
 @dataclass
 class Point:
@@ -312,6 +312,6 @@ def visualize_sample_page():
 
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
-    visualize_sample_page()
-    #generate_dataset_parallel(300000)
+    #visualize_sample_page()
+    generate_dataset_parallel(1000000)
     

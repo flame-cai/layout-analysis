@@ -236,7 +236,7 @@ def main():
     
     # Create and train model (keeping architecture unchanged)
     model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=30)
+    train_model(model, train_loader, val_loader, device=device, num_epochs=3)
     
     # Load the best saved model and evaluate
     model.load_state_dict(torch.load('/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt'))
