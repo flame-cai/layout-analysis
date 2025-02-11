@@ -5,6 +5,7 @@ import os
 from scipy.spatial import Delaunay
 
 MAX_NO_POINTS = 1800
+SEARCH_WINDOW = 50   # consider candidates in the ±50 index window
 
 class PointDataset(Dataset):
     def __init__(self, data_dir, split_files, max_points=MAX_NO_POINTS, normalize=True, labels_mode=True):
@@ -68,7 +69,7 @@ class PointDataset(Dataset):
         features[:, :2] = points  # columns 0-1: original (x, y)
 
         k = 4         # number of neighbors to select
-        window = 50   # consider candidates in the ±50 index window
+        window = SEARCH_WINDOW   # consider candidates in the ±50 index window
         candidate_count = 2 * window + 1  # total candidates per point
 
         # For each point, construct candidate indices: i + [-50, -49, ..., 0, ..., 50]

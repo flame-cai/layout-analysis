@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from generate_data_1 import MAX_CLASSES
-from angle_data_loading import MAX_NO_POINTS
+#from angle_data_loading import MAX_NO_POINTS
 
 #NUM_CLASSES = MAX_NO_POINTS
 NUM_CLASSES = MAX_CLASSES # MAX_BLOCKS
