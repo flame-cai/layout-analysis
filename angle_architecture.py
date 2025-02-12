@@ -4,8 +4,8 @@ import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from generate_data_1 import MAX_CLASSES
 
-NUM_CLASSES = MAX_CLASSES # MAX_BLOCKS
-TOTAL_CLASSES = NUM_CLASSES#*4 # + for each line, there are left, right, center anchors
+# MAX_BLOCKS
+TOTAL_CLASSES = MAX_CLASSES#*4 # + for each line, there are left, right, center anchors
 
 
 class ReadingOrderTransformer(nn.Module):

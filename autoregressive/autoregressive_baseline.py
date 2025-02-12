@@ -244,7 +244,7 @@ def main():
     # test_loader = DataLoader(test_dataset, batch_size=1, num_workers=4, pin_memory=True)
 
     (train_loader, val_loader, test_loader),(train_norm_params, val_norm_params, test_norm_params) = create_data_loaders(
-    num_samples=50000,
+    num_samples=1000,
     batch_size=32
     )
     

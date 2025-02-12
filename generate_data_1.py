@@ -248,7 +248,7 @@ class Page:
                     # elif point_idx == int((len_line - 1)/2): #center
                     #     label = line_idx + MAX_CLASSES*3#+ 300
                     # else:
-                    label = line_idx+1
+                    label = line_idx
                     # 0 padding
                     # 1-15 labels
                     # 16 start token
@@ -315,5 +315,5 @@ def visualize_sample_page():
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
     #visualize_sample_page()
-    generate_dataset_parallel(100)
+    generate_dataset_parallel(2000000)
     
