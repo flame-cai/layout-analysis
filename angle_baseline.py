@@ -211,11 +211,11 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
         accuracy = (pred_labels[valid_mask] == true_labels_first[valid_mask]).float().mean()
         print(f'Page {page_idx + 1} Accuracy: {accuracy:.2%}')
 
-    
+
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    all_files = [f.split('__')[0] for f in os.listdir(DATA_PATH) if f.endswith('__points.txt')][:1000]
+    all_files = [f.split('__')[0] for f in os.listdir(DATA_PATH) if f.endswith('__points.txt')]
     random.shuffle(all_files)
       
     train_files = all_files[:int(0.7*len(all_files))]

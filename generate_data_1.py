@@ -258,7 +258,7 @@ class Page:
         # Convert to NumPy arrays and sort by y-coordinate
         points = np.array(points)
         labels = np.array(labels)
-        sorted_indices = np.argsort(points[:, 1])
+        sorted_indices = np.argsort(points[:, 1]) # 1 -> sort along y
         points = points[sorted_indices]
         labels = labels[sorted_indices]
         
@@ -313,7 +313,5 @@ def visualize_sample_page():
     #plt.show()
 
 if __name__ == '__main__':
-    # Generate 10,000 pages in parallel.
-    #visualize_sample_page()
     generate_dataset_parallel(2000000)
     
