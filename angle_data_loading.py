@@ -166,3 +166,4 @@ class PointDataset(Dataset):
             'min_y': self.norm_params.min_y,
             'max_y': self.norm_params.max_y
         }
+    

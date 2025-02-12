@@ -24,8 +24,7 @@ class ReadingOrderTransformer(nn.Module):
         
         # Transformer encoder
         encoder_layers = TransformerEncoderLayer(d_model, nhead, dim_feedforward=d_model*2)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, num_encoder_layers)
-        
+        self.transformer_encoder = TransformerEncoder(encoder_layers, num_encoder_layers,enable_nested_tensor=True)
         # Output layer
         self.output = nn.Linear(d_model, num_classes)
         
@@ -35,12 +34,15 @@ class ReadingOrderTransformer(nn.Module):
         # Embed input
         src = self.input_embed(src)  # [batch_size, seq_len, d_model]
         src = src.transpose(0, 1)  # [seq_len, batch_size, d_model]
+
+        # Create a square subsequent mask for causal attention
+        seq_len = src.size(0)
+        mask = nn.Transformer.generate_square_subsequent_mask(seq_len).to(src.device)
         
         # Transform
-        output = self.transformer_encoder(src)
-        
-        # Output layer
+        output = self.transformer_encoder(src,attn_mask=mask, is_causal=True)
         output = output.transpose(0, 1)  # [batch_size, seq_len, d_model]
         output = self.output(output)  # [batch_size, seq_len, num_classes] 
         
         return output
+    
