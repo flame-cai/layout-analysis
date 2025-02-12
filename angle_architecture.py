@@ -40,7 +40,7 @@ class ReadingOrderTransformer(nn.Module):
         mask = nn.Transformer.generate_square_subsequent_mask(seq_len).to(src.device)
         
         # Transform
-        output = self.transformer_encoder(src,attn_mask=mask, is_causal=True)
+        output = self.transformer_encoder(src,mask=mask, is_causal=True)
         output = output.transpose(0, 1)  # [batch_size, seq_len, d_model]
         output = self.output(output)  # [batch_size, seq_len, num_classes] 
         
