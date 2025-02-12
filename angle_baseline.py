@@ -12,8 +12,8 @@ import torch.nn.functional as F
 
 random.seed(10)
 
-#DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
-DATA_PATH = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data"
+DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
+#DATA_PATH = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data"
 
 
 def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):

@@ -6,15 +6,23 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
-from no_angle_architecture import ReadingOrderTransformer
-from no_angle_data_loading import *
+import torch.nn.functional as F
+from autoregressive_synthetic_data_generator import *
 
-#DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
-DATA_PATH = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data"
+# Import the autoregressive variant.
+# (Make sure your angle_architecture file now exports AutoregressiveReadingOrderTransformer)
+from autoregressive_architecture import AutoregressiveReadingOrderTransformer
+from autoregressive_data_loading import *
+
+random.seed(10)
+
+DATA_PATH = "/home/kartik/layout-analysis/data/synthetic-data"
+#DATA_PATH = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data"
 
 
 def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
-    criterion = nn.CrossEntropyLoss(ignore_index=-1)
+    # The ground-truth loss ignores tokens with label -1 (if any)
+    criterion = nn.CrossEntropyLoss(ignore_index=0)
     
     # Use AdamW with recommended hyperparameters
     optimizer = optim.AdamW(
@@ -54,10 +62,22 @@ def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
             points, labels = points.to(device), labels.to(device)
             optimizer.zero_grad()
             
+            # Build teacher forcing input:
+            # For each example, prepend the start token (defined in the model) to the ground truth labels,
+            # dropping the final label (i.e., shift right).
+            tgt_input = torch.cat([
+                torch.full((labels.size(0), 1), model.start_token, dtype=torch.long, device=device),
+                labels[:, :-1]
+            ], dim=1)
+            
             # Use mixed precision autocast if available
             with torch.cuda.amp.autocast(enabled=(scaler is not None)):
-                output = model(points)
-                loss = criterion(output.view(-1, output.size(-1)), labels.view(-1))
+                # Forward pass using both encoder (points) and teacher forcing input (tgt_input)
+                logits = model(points, tgt_input)  # Expected shape: [batch, seq_len, num_classes]
+                
+                # Compute cross-entropy loss (flattening over batch and time)
+                loss_ce = criterion(logits.view(-1, logits.size(-1)), labels.view(-1))
+                loss = loss_ce 
             
             if scaler is not None:
                 scaler.scale(loss).backward()
@@ -83,8 +103,14 @@ def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
         with torch.no_grad():
             for points, labels in val_loader:
                 points, labels = points.to(device), labels.to(device)
-                output = model(points)
-                val_loss += criterion(output.view(-1, output.size(-1)), labels.view(-1)).item()
+                tgt_input = torch.cat([
+                    torch.full((labels.size(0), 1), model.start_token, dtype=torch.long, device=device),
+                    labels[:, :-1]
+                ], dim=1)
+                output = model(points, tgt_input)
+                
+                loss_ce = criterion(output.view(-1, output.size(-1)), labels.view(-1))
+                val_loss += loss_ce.item()
         
         print(f'Epoch {epoch}: Train Loss = {train_loss/len(train_loader):.4f}, '
               f'Val Loss = {val_loss/len(val_loader):.4f}')
@@ -92,7 +118,7 @@ def train_model(model, train_loader, val_loader, num_epochs=50, device='cuda'):
         # Save best model based on validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), '/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt')
+            torch.save(model.state_dict(), '/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model_autoregressive.pt')
 
 
 def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm_params=None):
@@ -100,11 +126,11 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
     Evaluate the model and create visualizations for multiple test pages.
     
     Args:
-        model: The trained transformer model
-        test_loader: DataLoader containing test data
-        device: Device to run the model on ('cuda' or 'cpu')
-        num_pages: Number of test pages to visualize
-        norm_params: Dictionary containing normalization parameters {min_x, max_x, min_y, max_y}
+        model: The trained autoregressive transformer model.
+        test_loader: DataLoader containing test data.
+        device: Device to run the model on ('cuda' or 'cpu').
+        num_pages: Number of test pages to visualize.
+        norm_params: Dictionary containing normalization parameters {min_x, max_x, min_y, max_y}.
     """
     model = model.to(device)
     model.eval()
@@ -123,8 +149,11 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
         true_labels_first = true_labels[0]
         
         with torch.no_grad():
-            output = model(points_first.unsqueeze(0))
-            pred_labels = output[0].argmax(dim=-1).cpu()
+            # Use the model's generate() method for autoregressive inference.
+            # Generate a sequence of tokens (predicted labels) of the same length as the input.
+            pred_tokens = model.generate(points_first.unsqueeze(0), max_len=points_first.size(0))
+            # pred_tokens is of shape [1, seq_len]; squeeze the batch dimension.
+            pred_labels = pred_tokens[0].cpu()
         
         points_first = points_first.cpu()
         
@@ -150,7 +179,7 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
                                  c=valid_labels, cmap='viridis',
                                  s=100, zorder=5)
             
-            for i, (x, y) in enumerate(valid_points):
+            for i, (x, y) in enumerate(valid_points[:, :2]):
                 label = valid_labels[i]
                 ax.annotate(str(label.item()),
                             (x, y),
@@ -195,32 +224,36 @@ def evaluate_and_visualize(model, test_loader, device='cuda', num_pages=10, norm
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # all_files = [f.split('__')[0] for f in os.listdir(DATA_PATH) if f.endswith('__points.txt')][:1000]
+    # random.shuffle(all_files)
+      
+    # train_files = all_files[:int(0.7*len(all_files))]
+    # val_files = all_files[int(0.7*len(all_files)):int(0.85*len(all_files))]
+    # test_files = all_files[int(0.85*len(all_files)):]
     
-    all_files = [f.split('__')[0] for f in os.listdir(DATA_PATH) if f.endswith('__points.txt')]
-    random.shuffle(all_files)
-    
-    train_files = all_files[:int(0.7*len(all_files))]
-    val_files = all_files[int(0.7*len(all_files)):int(0.85*len(all_files))]
-    test_files = all_files[int(0.85*len(all_files)):]
-    
-    train_dataset = PointDataset(DATA_PATH, train_files, labels_mode=True)
-    val_dataset = PointDataset(DATA_PATH, val_files, labels_mode=True)
-    test_dataset = PointDataset(DATA_PATH, test_files, labels_mode=True)
+    # train_dataset = PointDataset(DATA_PATH, train_files, labels_mode=True)
+    # val_dataset = PointDataset(DATA_PATH, val_files, labels_mode=True)
+    # test_dataset = PointDataset(DATA_PATH, test_files, labels_mode=True)
 
-    train_norm_params = train_dataset.get_normalization_params()
-    val_norm_params = val_dataset.get_normalization_params()
-    test_norm_params = test_dataset.get_normalization_params()
+    # train_norm_params = train_dataset.get_normalization_params()
+    # val_norm_params = val_dataset.get_normalization_params()
+    # test_norm_params = test_dataset.get_normalization_params()
     
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=4, pin_memory=True)
+    # train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+    # val_loader = DataLoader(val_dataset, batch_size=32, num_workers=4, pin_memory=True)
+    # test_loader = DataLoader(test_dataset, batch_size=1, num_workers=4, pin_memory=True)
+
+    (train_loader, val_loader, test_loader),(train_norm_params, val_norm_params, test_norm_params) = create_data_loaders(
+    num_samples=50000,
+    batch_size=32
+    )
     
-    # Create and train model (keeping architecture unchanged)
-    model = ReadingOrderTransformer()
-    train_model(model, train_loader, val_loader, device=device, num_epochs=20)
+    # Create and train the autoregressive model.
+    model = AutoregressiveReadingOrderTransformer()
+    train_model(model, train_loader, val_loader, device=device, num_epochs=4)
     
     # Load the best saved model and evaluate
-    model.load_state_dict(torch.load('/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model.pt'))
+    model.load_state_dict(torch.load('/mnt/cai-data/manuscript-annotation-tool/models/segmentation/graph-models/best_model_autoregressive.pt'))
     evaluate_and_visualize(model, test_loader, device=device, norm_params=test_norm_params)
 
 

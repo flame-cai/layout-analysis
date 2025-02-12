@@ -241,15 +241,17 @@ class Page:
             for line_idx, line in enumerate(block.lines):
                 len_line = len(line.points)
                 for point_idx,point in enumerate(line.points):
-                    if point_idx == 0: #left 
-                        label = line_idx + MAX_CLASSES 
-                    elif point_idx == len_line - 1: #right
-                        label = line_idx + MAX_CLASSES*2
-                    elif point_idx == int((len_line - 1)/2): #center
-                        label = line_idx + MAX_CLASSES*3#+ 300
-                    else:
-                        label = line_idx
-            
+                    # if point_idx == 0: #left 
+                    #     label = line_idx + MAX_CLASSES 
+                    # elif point_idx == len_line - 1: #right
+                    #     label = line_idx + MAX_CLASSES*2
+                    # elif point_idx == int((len_line - 1)/2): #center
+                    #     label = line_idx + MAX_CLASSES*3#+ 300
+                    # else:
+                    label = line_idx+1
+                    # 0 padding
+                    # 1-15 labels
+                    # 16 start token
                     points.append([point.x, point.y])
                     labels.append(label)
                     
@@ -281,7 +283,7 @@ def process_page(page_idx: int, base_path: str) -> None:
     np.savetxt(labels_file, labels, fmt='%d')
 
 def generate_dataset_parallel(num_pages: int = 100, 
-                              base_path: str = "/mnt/cai-data/manuscript-annotation-tool/synthetic-data/"):
+                              base_path: str = "/home/kartik/layout-analysis/data/synthetic-data/"):
     """
     Generate multiple pages of synthetic data in parallel.
     Each page is processed in a separate process.
@@ -313,5 +315,5 @@ def visualize_sample_page():
 if __name__ == '__main__':
     # Generate 10,000 pages in parallel.
     #visualize_sample_page()
-    generate_dataset_parallel(1000000)
+    generate_dataset_parallel(100)
     
