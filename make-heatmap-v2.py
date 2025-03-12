@@ -415,12 +415,12 @@ def process_image(folder_path):
         # Save figure
         print(region_score.shape)
         print(points.shape)
-        np.savetxt(test_data_path+f'pg_{pg_counter}_points.txt', points, fmt='%d')
+        np.savetxt(test_data_path+f'{_filename[:-4]}.txt', points, fmt='%d')
 
         fig = visualize_results(region_score, points)
         plt.show()
         plt.axis('off')  # Turn off the axis        
-        #plt.savefig(f'/mnt/cai-data/layout-analysis/manuscripts/{m_name}/heatmaps/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
+        plt.savefig(test_data_path+f'{_filename[:-4]}_heatmap',dpi=300, bbox_inches='tight', pad_inches=0)
         #plt.savefig(f'/home/kartik/layout-analysis/analysis_images/{_filename}',dpi=300, bbox_inches='tight', pad_inches=0)
         pg_counter +=1
 
