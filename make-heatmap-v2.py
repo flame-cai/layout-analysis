@@ -315,7 +315,7 @@ def load_images_from_folder(folder_path):
     
     return inp_images, file_names
 
-def heatmap_to_pointcloud(heatmap, min_peak_value=0.3, min_distance=10):
+def heatmap_to_pointcloud(heatmap, min_peak_value=0.1, min_distance=2): #0.3, 10
     """
     Convert a 2D heatmap to a point cloud by identifying local maxima and generating
     points with density proportional to the heatmap intensity.
@@ -369,7 +369,7 @@ def visualize_results(heatmap, points):
     ax.imshow(heatmap, cmap='hot')
     
     # Overlay the point cloud on the heatmap
-    ax.scatter(points[:, 0], points[:, 1], s=1, c='blue', alpha=0.5)
+    #ax.scatter(points[:, 0], points[:, 1], s=1, c='blue', alpha=0.5)
     
     # Set title and axis limits
     ax.set_title('Heatmap with Generated Point Cloud')
